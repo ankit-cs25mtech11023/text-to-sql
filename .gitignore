@@ -1,0 +1,36 @@
+# Environment
+.env
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual env
+venv/
+.venv/
+SQL_venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Evaluation results (large, regenerable)
+evaluation/results/*.csv
+evaluation/results/*.json
+
+# Claude
+.claude/
