@@ -257,10 +257,10 @@ class SchemaExtractor:
     def get_ddl(self) -> str                    # CREATE TABLE statements
     def get_sample_rows(self, table, n=3) -> str # Example rows for grounding
     def get_column_descriptions(self) -> str     # From descriptions.json
-    def get_full_context(self) -> str            # Combined context block
+    def get_full_context(self) -> dict[str, str] # Combined context block
 ```
 
-Reads live DB schema via `sqlalchemy.inspect` — stays in sync if schema evolves.
+Reads DB schema via `sqlalchemy.inspect` **once at pipeline init** — result is passed to `PromptBuilder` which caches the assembled system prompt. No DB reads happen per query. The schema for this project is fixed; live inspection just means a restart picks up any schema change automatically.
 
 ### 2C. Prompt Builder (`core/prompt_builder.py`)
 
@@ -291,6 +291,8 @@ USER: {question}
 ```
 
 **Start zero-shot** (saves tokens on Groq free tier). Few-shot configurable for ablation in Phase 5.
+
+**Token behavior:** LLM APIs are stateless — every call must include the full context. The system prompt (~10K tokens) is sent with every query; there is no "send once" mechanism. Groq mitigates this with **implicit prefix caching**: identical system prompts are cached server-side, so repeated calls with the same schema context don't incur full compute cost. For the Streamlit UI, conversation history is accumulated across turns (system sent once, then user/assistant pairs grow) so within a chat session the schema is not re-sent redundantly.
 
 ### 2D. SQL Generator (`core/sql_generator.py`)
 
@@ -543,8 +545,8 @@ python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/
 
 | Week | Phase | Milestone |
 |------|-------|-----------|
-| 1 | Phase 1 | Database schema + seed data working |
-| 2 | Phase 2 | LLM generates SQL from natural language via Groq |
+| 1 | Phase 1 ✅ | Database schema + seed data working |
+| 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq |
 | 3 | Phase 3 | Full pipeline: question → validated SQL → results |
 | 4 | Phase 4 | Streamlit demo ready to show advisor |
 | 5-6 | Phase 5 | Benchmark framework + initial accuracy numbers |
