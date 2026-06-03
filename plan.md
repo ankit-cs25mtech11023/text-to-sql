@@ -211,32 +211,44 @@ sqlite3 gst_demo.db "SELECT COUNT(*) FROM invoices;"
 
 ### 2A. LLM Client (`core/llm_client.py`)
 
-Abstract base class + Groq implementation:
+Abstract base class with provider implementations. Both Groq and OpenRouter use OpenAI-compatible APIs, so the client is a thin wrapper — just different base URLs and API keys.
+
 ```python
 class LLMClient(ABC):
     @abstractmethod
     def generate(self, messages: list[dict], temperature: float = 0.0, max_tokens: int = 1024) -> str:
         pass
 
-class GroqClient(LLMClient):
-    def __init__(self, api_key: str, model: str = "llama-3.1-8b-instant"):
-        ...
+class GroqClient(LLMClient): ...
+class OpenRouterClient(LLMClient): ...
+# Future: class VLLMClient(LLMClient): ... for local GPU
 ```
 
-**Models for comparison (all on Groq):**
+**Providers (free tiers only):**
 
-Deployment models (must be ≤10B — future GPU can only handle this size):
-| Model | Params | Notes |
-|-------|--------|-------|
-| `llama-3.1-8b-instant` | 8B | Primary — guaranteed on free tier, fits GPU constraint |
-| `gemma2-9b-it` | 9B | Google's model, strong instruction following |
+| Provider | Free Tier Limits | Notes |
+|----------|-----------------|-------|
+| Groq | 30 RPM, 6K TPM, ~1,000 req/day | Fastest inference, model roster changes often |
+| OpenRouter | ~20 RPM, ~200 req/day | More model variety, good fallback |
 
-Upper-bound baseline (for thesis comparison only — NOT for deployment):
-| Model | Params | Notes |
-|-------|--------|-------|
-| `llama-3.3-70b-versatile` | 70B | Shows how close ≤10B gets to a 70B model |
+Spread evaluation load across both providers to work around daily limits.
 
-**Rate limiting:** Groq free tier = 30 RPM, 6K TPM. Implement simple token bucket with sleep.
+**Models for comparison:**
+
+Deployment candidates (must be ≤10B — future GPU can only handle this):
+| Model | Params | Provider | Notes |
+|-------|--------|----------|-------|
+| `gemma2-9b-it` | 9B | Groq | Confirmed available, 15K TPM on free tier |
+| `qwen/qwen3-coder:free` | ~8B | OpenRouter | Best free coding model |
+
+Upper-bound baseline (thesis comparison only — NOT for deployment):
+| Model | Params | Provider | Notes |
+|-------|--------|----------|-------|
+| `llama-3.3-70b-versatile` | 70B | Groq | Shows how close ≤10B gets to 70B |
+
+**Note:** Free tier models change frequently. Check provider docs before each eval run. The abstract LLMClient makes switching trivial — just change config.
+
+**Rate limiting:** Implement simple sleep-based limiter per provider. Critical during batch evaluation.
 
 ### 2B. Schema Extractor (`core/schema_extractor.py`)
 
@@ -297,7 +309,8 @@ class SQLGenerator:
 - `config/settings.py`
 
 ### Libraries
-- `groq`
+- `groq` (Groq SDK)
+- `openai` (OpenRouter uses OpenAI-compatible API)
 - `sqlalchemy`
 - `python-dotenv`
 - `pydantic`
@@ -463,7 +476,7 @@ streamlit run ui/app.py
 
 | Experiment | Purpose |
 |---|---|
-| Llama 3.1-8B vs Gemma2-9B (deployable) vs Llama 3.3-70B (upper-bound baseline) | Model comparison (main thesis table) |
+| Gemma2-9B vs Qwen3-Coder (deployable) vs Llama 3.3-70B (upper-bound baseline) | Model comparison (main thesis table) |
 | With vs without column descriptions | Schema enrichment impact |
 | With vs without sample rows | Data grounding impact |
 | 0-shot vs 3-shot vs 5-shot | Few-shot learning effect |
@@ -545,6 +558,7 @@ python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/
 ```
 # Core
 groq>=0.9.0
+openai>=1.0
 sqlalchemy>=2.0
 sqlparse>=0.5
 python-dotenv>=1.0
@@ -580,9 +594,9 @@ jupyter>=1.0
 
 | Risk | Mitigation |
 |------|------------|
-| Groq drops/changes free tier models | LLM client is abstract — switching is one config change |
-| Llama 3.1-8B underperforms on complex JOINs | Self-correction handles many failures. Compare with larger models. Document as thesis finding |
-| Rate limit (6K TPM) slows evaluation | 2s delay between eval queries. 100 questions = ~3.5 min |
+| Provider drops/changes free tier models | LLM client is abstract — switch provider or model in config |
+| ≤10B models underperform on complex JOINs | Self-correction handles many failures. Document as thesis finding |
+| Daily request limits slow evaluation | Spread across Groq + OpenRouter. ~1,200 combined req/day is enough for one full eval run |
 | GST schema too big for prompt | 7 tables fit in ~3K tokens. Llama 3.1-8B has 128K context. Not a risk |
 | No GPU when thesis is due | Groq is primary path. Local GPU is Phase 6 nice-to-have |
 | SQL injection in govt deployment | Validator blocks non-SELECT + DB has read-only role. Defense in depth |
