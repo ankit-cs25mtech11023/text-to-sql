@@ -238,7 +238,7 @@ Spread evaluation load across both providers to work around daily limits.
 Deployment candidates (must be ≤10B — future GPU can only handle this):
 | Model | Params | Provider | Notes |
 |-------|--------|----------|-------|
-| `gemma2-9b-it` | 9B | Groq | Confirmed available, 15K TPM on free tier |
+| `llama-3.1-8b-instant` | 8B | Groq | Replaces decommissioned gemma2-9b-it (Jun 2026) |
 | `qwen/qwen3-coder:free` | ~8B | OpenRouter | Best free coding model |
 
 Upper-bound baseline (thesis comparison only — NOT for deployment):

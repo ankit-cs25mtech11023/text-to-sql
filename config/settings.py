@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     descriptions_path: str = "database/descriptions.json"
 
     default_provider: str = "groq"
-    default_model: str = "gemma2-9b-it"
+    default_model: str = "llama-3.1-8b-instant"
 
     temperature: float = 0.0
     max_tokens: int = 1024
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     # Models available per provider
     groq_models: list[str] = [
-        "gemma2-9b-it",
+        "llama-3.1-8b-instant",
         "llama-3.3-70b-versatile",
     ]
     openrouter_models: list[str] = [

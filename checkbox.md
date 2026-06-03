@@ -16,7 +16,7 @@
 - [x] `core/schema_extractor.py` — DB metadata + descriptions → context string
 - [x] `core/prompt_builder.py` — Assembles system prompt + schema + question
 - [x] `core/sql_generator.py` — Question → prompt → LLM → extract SQL
-- [ ] Verification: `SQLGenerator.generate("How many invoices are there?")` returns valid SQL (needs API key)
+- [x] Verification: `SQLGenerator.generate()` tested — correct SQL for simple, multi-join, and ranking queries
 
 ## Phase 3: SQL Validation & Execution
 
