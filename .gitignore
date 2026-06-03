@@ -34,3 +34,4 @@ evaluation/results/*.json
 
 # Claude
 .claude/
+CLAUDE.md
