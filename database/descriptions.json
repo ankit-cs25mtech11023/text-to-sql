@@ -1,0 +1,82 @@
+{
+  "state_codes": {
+    "table_description": "Reference table mapping 2-digit state codes to state names. Used to resolve place_of_supply and supplier/buyer state codes.",
+    "columns": {
+      "state_code": "2-digit code assigned by GST council. E.g., '27' = Maharashtra, '07' = Delhi, '29' = Karnataka.",
+      "state_name": "Full name of the Indian state or union territory.",
+      "state_type": "'State' for full states, 'UT' for union territories like Chandigarh or Ladakh."
+    }
+  },
+  "hsn_master": {
+    "table_description": "Reference table for Harmonized System of Nomenclature codes. Maps goods/services codes to descriptions and default tax rates.",
+    "columns": {
+      "hsn_code": "4 to 8 digit code identifying a commodity. First 2 digits = chapter (e.g., '84' = machinery), first 4 = heading.",
+      "description": "Human-readable description of the goods or service category.",
+      "chapter": "First 2 digits of the HSN code indicating the broad product chapter.",
+      "default_tax_rate": "Default GST rate for this HSN: 0, 5, 12, 18, or 28 percent."
+    }
+  },
+  "suppliers": {
+    "table_description": "Master table of GST-registered suppliers (sellers) who file GSTR-1 returns.",
+    "columns": {
+      "gstin": "15-character GST Identification Number. Format: 2-digit state code + 10-char PAN + entity number + check digit.",
+      "legal_name": "Registered legal name of the business entity.",
+      "trade_name": "Trade or brand name, may differ from legal name. Can be NULL.",
+      "state_code": "2-digit state code of the supplier's registration state.",
+      "state_name": "Full name of the supplier's registration state.",
+      "registration_type": "'Regular' (standard taxpayer), 'Composition' (simplified scheme for small businesses, pays flat rate).",
+      "created_at": "Date the supplier registered under GST."
+    }
+  },
+  "buyers": {
+    "table_description": "Master table of buyers (customers). B2B buyers are GST-registered; B2C and export buyers may not be.",
+    "columns": {
+      "gstin": "GSTIN of the buyer. NULL for unregistered B2C buyers (B2CS category).",
+      "legal_name": "Name of the buying entity. Can be NULL for anonymous B2C transactions.",
+      "state_code": "2-digit state code of the buyer's location. Used to determine intra-state vs inter-state supply.",
+      "state_name": "Full name of the buyer's state.",
+      "buyer_type": "'B2B' = registered business buyer; 'B2CL' = unregistered buyer with invoice > 2.5 lakh; 'B2CS' = unregistered buyer with invoice <= 2.5 lakh; 'EXPORT' = overseas buyer."
+    }
+  },
+  "invoices": {
+    "table_description": "Core transaction table. Each row is one GST invoice filed under GSTR-1 return by a supplier.",
+    "columns": {
+      "invoice_number": "Supplier-assigned invoice number. Unique per supplier.",
+      "invoice_date": "Date the invoice was issued (YYYY-MM-DD).",
+      "invoice_type": "'B2B' = business-to-business supply; 'B2CL' = B2C large (inter-state, value > 2.5 lakh); 'B2CS' = B2C small; 'EXPORT' = export supply; 'CDNR' = credit/debit note for registered buyer; 'CDNUR' = credit/debit note for unregistered buyer.",
+      "supplier_id": "Foreign key to suppliers table.",
+      "buyer_id": "Foreign key to buyers table. NULL for B2CS (anonymous small B2C transactions).",
+      "place_of_supply": "2-digit state code where the supply is deemed to occur. If same as supplier state = intra-state (CGST+SGST applies). If different = inter-state (IGST applies).",
+      "reverse_charge": "TRUE if tax liability is on the buyer instead of the supplier (Section 9(3) or 9(4) of CGST Act 2017).",
+      "invoice_value": "Total invoice amount including all taxes (taxable_value + CGST + SGST + IGST + cess).",
+      "return_period": "MMYYYY format filing period. E.g., '032026' = March 2026, '012026' = January 2026.",
+      "filing_status": "'Filed' = submitted to GST portal; 'Pending' = not yet filed; 'Amended' = revised after original filing."
+    }
+  },
+  "invoice_items": {
+    "table_description": "Line items within each invoice. Each invoice has 1 or more items with individual tax breakup.",
+    "columns": {
+      "invoice_id": "Foreign key to invoices table.",
+      "hsn_code": "HSN/SAC code for this line item. First 2 digits = chapter.",
+      "description": "Description of goods or service for this line item.",
+      "quantity": "Quantity of goods supplied.",
+      "unit": "Unit of measurement (UQC): 'KGS' = kilograms, 'NOS' = numbers/units, 'MTR' = metres, 'LTR' = litres, 'SQM' = square metres.",
+      "taxable_value": "Value of supply before adding tax. GST is calculated on this amount.",
+      "tax_rate": "GST rate applied: 0, 5, 12, 18, or 28 percent.",
+      "cgst_amount": "Central GST = taxable_value × (tax_rate / 2) / 100. Non-zero ONLY for intra-state supplies (supplier state = place_of_supply).",
+      "sgst_amount": "State GST = taxable_value × (tax_rate / 2) / 100. Always equals CGST. Non-zero ONLY for intra-state supplies.",
+      "igst_amount": "Integrated GST = taxable_value × tax_rate / 100. Non-zero ONLY for inter-state supplies or exports. Cannot be non-zero simultaneously with CGST/SGST.",
+      "cess_amount": "Compensation cess on top of GST. Applicable on luxury/sin goods (e.g., tobacco, aerated drinks, vehicles)."
+    }
+  },
+  "export_invoices": {
+    "table_description": "Additional details for EXPORT-type invoices (GSTR-1 Table 6). Linked to invoices table.",
+    "columns": {
+      "invoice_id": "Foreign key to invoices table. Only EXPORT-type invoices have a row here.",
+      "port_code": "6-character Indian customs port code from where goods were exported.",
+      "shipping_bill_no": "Shipping bill number issued by customs. Required for claiming export benefits.",
+      "shipping_bill_date": "Date of shipping bill (YYYY-MM-DD).",
+      "export_type": "'WITH_PAYMENT' = IGST paid on export (can claim refund); 'WITHOUT_PAYMENT' = exported under bond/LUT with zero IGST."
+    }
+  }
+}
