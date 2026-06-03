@@ -10,13 +10,13 @@
 
 ## Phase 2: Core Pipeline (LLM Integration)
 
-- [ ] `config/settings.py` — Central config with Pydantic
-- [ ] `config/prompts.py` — All LLM prompt templates
-- [ ] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient
-- [ ] `core/schema_extractor.py` — DB metadata + descriptions → context string
-- [ ] `core/prompt_builder.py` — Assembles system prompt + schema + question
-- [ ] `core/sql_generator.py` — Question → prompt → LLM → extract SQL
-- [ ] Verification: `SQLGenerator.generate("How many invoices are there?")` returns valid SQL
+- [x] `config/settings.py` — Central config with Pydantic
+- [x] `config/prompts.py` — All LLM prompt templates (zero-shot + few-shot + correction)
+- [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient with rate limiting
+- [x] `core/schema_extractor.py` — DB metadata + descriptions → context string
+- [x] `core/prompt_builder.py` — Assembles system prompt + schema + question
+- [x] `core/sql_generator.py` — Question → prompt → LLM → extract SQL
+- [ ] Verification: `SQLGenerator.generate("How many invoices are there?")` returns valid SQL (needs API key)
 
 ## Phase 3: SQL Validation & Execution
 
