@@ -35,9 +35,9 @@
 
 - [ ] `evaluation/test_questions.json` — 100+ gold question-SQL pairs (simple/moderate/challenging)
 - [ ] `evaluation/metrics.py` — EX, VER, EM metrics
-- [ ] `evaluation/benchmark.py` — Batch runner across models/configs
-- [ ] `notebooks/03_evaluation_analysis.ipynb` — Results analysis
-- [ ] Verification: Benchmark script produces CSV with per-question results
+- [ ] `evaluation/benchmark.py` — Batch runner with caching + resume support
+- [ ] Run baseline evaluation (~130 API calls) → `evaluation/results/baseline.csv`
+- [ ] Verification: Baseline CSV shows per-question EX/VER/EM scores
 
 ## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
 

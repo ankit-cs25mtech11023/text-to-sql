@@ -477,21 +477,27 @@ streamlit run ui/app.py
 | **Valid Execution Rate (VER)** | Does SQL run without error? |
 | **Exact Set Match (EM)** | Strict SQL comparison after normalization |
 
-### 5C. Thesis Experiments
+### 5C. Evaluation Strategy
 
-All experiments run on `main` branch with static prompt approach.
+**Active (run now):** Single baseline run only.
 
-| Experiment | Purpose |
-|---|---|
-| llama-3.1-8b vs qwen3-coder (deployable) vs llama-3.3-70B (upper-bound baseline) | Model comparison (main thesis table) |
-| With vs without column descriptions | Schema enrichment impact |
-| With vs without sample rows | Data grounding impact |
-| 0-shot vs 3-shot vs 5-shot | Few-shot learning effect |
-| 1 attempt vs up to 3 (self-correction) | Error feedback loop value |
-| Accuracy by difficulty level (simple/moderate/challenging) | Where models struggle |
-| Temperature 0.0 vs 0.3 vs 0.7 | Decoding strategy impact |
+| Run | Config | Purpose |
+|-----|--------|---------|
+| Baseline | llama-3.1-8b, 0-shot, descriptions=ON, sample_rows=ON, max_attempts=3, temp=0.0 | Core result — establishes accuracy before RAG |
 
-RAG vs non-RAG comparison runs in Phase 5-B (`rag-enhancement` branch).
+~130 API calls total. Results saved to `evaluation/results/baseline.csv`.
+
+The baseline result feeds directly into Phase 5-B as the "before RAG" number. The primary thesis comparison is **baseline (static prompt) vs RAG pipeline**.
+
+**Deferred (resume when API constraints lift or when needed):**
+- Model ablations: qwen3-coder, llama-3.3-70b upper bound
+- Schema ablations: without descriptions, without sample rows
+- Few-shot ablations: 0-shot vs 3-shot
+- Self-correction ablation: 1 attempt vs 3 attempts
+- Temperature ablation: 0.0 vs 0.3
+- Difficulty breakdown: simple / moderate / challenging
+
+These are fully designed and ready to run — just not prioritised yet. Resume by passing flags to `benchmark.py`.
 
 ### Files to Create
 - `evaluation/test_questions.json`
@@ -657,20 +663,23 @@ vllm serve XGenerationLab/XiYanSQL-QwenCoder-7B-2502 \
 
 ---
 
-### 5B-7. RAG Ablation Experiments
+### 5B-7. RAG Evaluation
 
-Run using the Phase 5 benchmark framework (`evaluation/benchmark.py`) with `--branch rag`:
+**Active (run now):** Single RAG run, same 100 questions as Phase 5 baseline.
 
-| Experiment | Purpose |
-|---|---|
-| No RAG vs Schema RAG only | Does table retrieval alone help? |
-| No RAG vs Few-shot RAG only | Does dynamic few-shot help more than static? |
-| No RAG vs Schema RAG + Few-shot RAG (combined) | Full RAG benefit |
-| Top-K=3 vs Top-K=5 tables retrieved | Optimal retrieval depth |
-| Q-SQL store size: 10 vs 25 vs 50 pairs | How many examples are needed? |
-| RAG + llama-3.1-8b vs RAG + XiYanSQL-7B | Does RAG help specialized models more? |
+| Run | Config | Purpose |
+|-----|--------|---------|
+| RAG pipeline | Schema RAG + Few-shot RAG, llama-3.1-8b, max_attempts=3, temp=0.0 | Core RAG result |
 
-These experiments produce the thesis's Phase 5-B results chapter: *"RAG-augmented Text-to-SQL for GST domain"*.
+~130 API calls. Results saved to `evaluation/results/rag.csv`.
+
+**Primary thesis comparison:** `baseline.csv` vs `rag.csv` — does RAG improve accuracy on GST domain?
+
+**Deferred RAG ablations (resume when ready):**
+- Schema RAG only vs Few-shot RAG only vs Both
+- Top-K=3 vs Top-K=5 retrieved tables
+- Q-SQL store size: 10 vs 25 vs 50 pairs
+- RAG + llama-3.1-8b vs RAG + XiYanSQL-7B (needs GPU)
 
 ---
 
@@ -760,11 +769,11 @@ print('Shots:', [s['question'] for s in shots])
 | 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq | `main` |
 | 3 | Phase 3 ✅ | Full pipeline: question → validated SQL → results | `main` |
 | 4 | Phase 4 | Streamlit demo ready to show advisor | `main` |
-| 5-6 | Phase 5 | Benchmark framework + initial accuracy numbers | `main` |
-| 7-8 | Phase 5 | All ablation studies + model comparisons complete | `main` |
-| 9-10 | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline | `rag-enhancement` |
-| 11-12 | Phase 5-B | RAG ablation experiments + comparison vs baseline | `rag-enhancement` |
-| 13-14 | Phase 6 | FastAPI + PostgreSQL + security (when green light) | `main` (merge) |
+| 5 | Phase 5 | 100 gold Q-SQL pairs + benchmark runner + baseline evaluation (~130 calls) | `main` |
+| 6-7 | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation (~130 calls) | `rag-enhancement` |
+| 8 | Phase 5-B | Baseline vs RAG comparison — primary thesis result | `rag-enhancement` |
+| TBD | Ablations | All deferred ablation studies — resume when API constraints lift | `main` / `rag-enhancement` |
+| TBD | Phase 6 | FastAPI + PostgreSQL + security (when green light) | `main` (merge) |
 
 ---
 
