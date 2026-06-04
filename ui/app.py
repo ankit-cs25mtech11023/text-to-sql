@@ -108,11 +108,13 @@ def main() -> None:
             if msg["role"] == "user":
                 st.write(msg["content"])
             else:
-                _render_response(msg["payload"], show_sql_first)
+                # use the tab order that was active when the response was generated
+                _render_response(msg["payload"], msg["payload"]["show_sql_first"])
 
     question: str | None = None
     if prompt := st.chat_input("Ask a question about GST data..."):
         question = prompt
+        st.session_state.pop("pending_question", None)  # discard stale sidebar click
     elif "pending_question" in st.session_state:
         question = st.session_state.pop("pending_question")
 
@@ -126,15 +128,27 @@ def main() -> None:
 
         with st.chat_message("assistant"):
             with st.spinner("Generating SQL and executing..."):
-                result = pipeline.ask(question)
-            payload: dict = {
-                "success": result.success,
-                "sql": result.sql,
-                "data": result.data,
-                "error": result.error,
-                "attempts": result.attempts,
-                "execution_time_ms": result.execution_time_ms,
-            }
+                try:
+                    result = pipeline.ask(question)
+                    payload: dict = {
+                        "success": result.success,
+                        "sql": result.sql,
+                        "data": result.data,
+                        "error": result.error or "Unknown error",
+                        "attempts": result.attempts,
+                        "execution_time_ms": result.execution_time_ms,
+                        "show_sql_first": show_sql_first,
+                    }
+                except Exception as exc:
+                    payload = {
+                        "success": False,
+                        "sql": "",
+                        "data": None,
+                        "error": str(exc),
+                        "attempts": 0,
+                        "execution_time_ms": 0.0,
+                        "show_sql_first": show_sql_first,
+                    }
             _render_response(payload, show_sql_first)
             st.session_state.messages.append({"role": "assistant", "payload": payload})
 
