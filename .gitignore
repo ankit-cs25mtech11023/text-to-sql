@@ -35,3 +35,7 @@ evaluation/results/*.json
 # Claude
 .claude/
 CLAUDE.md
+
+# Local docs (not for repo)
+summary.md
+conversation.pdf
