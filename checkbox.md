@@ -20,11 +20,11 @@
 
 ## Phase 3: SQL Validation & Execution
 
-- [ ] `core/sql_validator.py` — SELECT-only enforcement via sqlparse
-- [ ] `core/sql_executor.py` — Run SQL, return DataFrame + metadata
-- [ ] `core/self_correction.py` — Error feedback loop (up to 3 attempts)
-- [ ] `core/pipeline.py` — End-to-end orchestrator
-- [ ] Verification: `pipeline.ask("Total tax by state?")` returns DataFrame
+- [x] `core/sql_validator.py` — SELECT-only enforcement via sqlparse
+- [x] `core/sql_executor.py` — Run SQL, return DataFrame + metadata
+- [x] `core/self_correction.py` — Error feedback loop (up to 3 attempts)
+- [x] `core/pipeline.py` — End-to-end orchestrator
+- [x] Verification: all 3 test queries passed; self-correction triggered and resolved on attempt 2
 
 ## Phase 4: Streamlit UI
 
