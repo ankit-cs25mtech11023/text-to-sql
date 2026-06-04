@@ -238,8 +238,9 @@ Spread evaluation load across both providers to work around daily limits.
 Deployment candidates (must be ≤10B — future GPU can only handle this):
 | Model | Params | Provider | Notes |
 |-------|--------|----------|-------|
-| `llama-3.1-8b-instant` | 8B | Groq | Replaces decommissioned gemma2-9b-it (Jun 2026) |
+| `llama-3.1-8b-instant` | 8B | Groq | Primary candidate — API available now |
 | `qwen/qwen3-coder:free` | ~8B | OpenRouter | Best free coding model |
+| `XiYanSQL-QwenCoder-7B` | 7B | Local (vLLM) | Specialized SQL fine-tune, SOTA on BIRD (69%). Phase 5-B / Phase 6 only — no API available |
 
 Upper-bound baseline (thesis comparison only — NOT for deployment):
 | Model | Params | Provider | Notes |
@@ -478,15 +479,19 @@ streamlit run ui/app.py
 
 ### 5C. Thesis Experiments
 
+All experiments run on `main` branch with static prompt approach.
+
 | Experiment | Purpose |
 |---|---|
-| Gemma2-9B vs Qwen3-Coder (deployable) vs Llama 3.3-70B (upper-bound baseline) | Model comparison (main thesis table) |
+| llama-3.1-8b vs qwen3-coder (deployable) vs llama-3.3-70B (upper-bound baseline) | Model comparison (main thesis table) |
 | With vs without column descriptions | Schema enrichment impact |
 | With vs without sample rows | Data grounding impact |
 | 0-shot vs 3-shot vs 5-shot | Few-shot learning effect |
 | 1 attempt vs up to 3 (self-correction) | Error feedback loop value |
 | Accuracy by difficulty level (simple/moderate/challenging) | Where models struggle |
 | Temperature 0.0 vs 0.3 vs 0.7 | Decoding strategy impact |
+
+RAG vs non-RAG comparison runs in Phase 5-B (`rag-enhancement` branch).
 
 ### Files to Create
 - `evaluation/test_questions.json`
@@ -507,6 +512,209 @@ python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/
 
 ---
 
+## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
+
+**When:** After Phase 5 is complete on `main`. Create a new branch:
+```bash
+git checkout -b rag-enhancement
+```
+
+**Goal:** Replace static schema injection with a full RAG pipeline — dynamic schema retrieval and dynamic few-shot retrieval using FAISS vector search. Compare accuracy against Phase 5 baseline. This is a distinct thesis contribution: *"Does RAG improve Text-to-SQL accuracy on a domain-specific GST schema?"*
+
+**Architecture change:**
+```
+Phase 1-5 (main):   Question → [full static schema + hardcoded few-shots] → LLM → SQL
+Phase 5-B (branch): Question → FAISS search → [top-K tables + similar Q-SQL pairs] → LLM → SQL
+```
+
+---
+
+### 5B-1. Schema Indexer (`core/schema_indexer.py`)
+
+Reads the DB schema once and builds a FAISS index of table embeddings.
+
+**M-Schema format** (more LLM-friendly than raw DDL):
+```
+Table: invoice_items
+  invoice_id (INTEGER) -- FK to invoices.invoice_id
+  igst_amount (REAL) -- Integrated GST, non-zero only for inter-state supplies
+  cgst_amount (REAL) -- Central GST, non-zero only for intra-state supplies
+  taxable_value (REAL) -- Value before tax; tax is computed on this
+  ...
+```
+
+**Process:**
+1. Read each table from DB via `sqlalchemy.inspect`
+2. Merge with `descriptions.json` to add semantic column comments
+3. Format each table as M-Schema text block
+4. Embed each table block using `sentence-transformers` (`BAAI/bge-large-en-v1.5`)
+5. Build FAISS index (one vector per table)
+6. Save index + table metadata to `index/schema.faiss` + `index/tables.pkl`
+
+```python
+class SchemaIndexer:
+    def build_index(self) -> None          # reads DB + descriptions → FAISS
+    def load_index(self) -> FAISSIndex     # loads from disk
+    def retrieve_tables(self, question: str, k: int = 5) -> list[str]  # top-K M-Schema blocks
+```
+
+---
+
+### 5B-2. Q-SQL Store (`evaluation/rag_qsql_store.json`)
+
+The few-shot retrieval pool. Built from Phase 5's gold Q-SQL pairs plus extra GST-specific examples.
+
+**Structure:**
+```json
+[
+  {
+    "question": "What is the total IGST collected from inter-state B2B invoices?",
+    "sql": "SELECT SUM(ii.igst_amount) FROM invoices i JOIN invoice_items ii ON i.invoice_id = ii.invoice_id JOIN suppliers s ON i.supplier_id = s.supplier_id WHERE i.invoice_type = 'B2B' AND i.place_of_supply != s.state_code;"
+  },
+  ...
+]
+```
+
+Target size: 50–100 pairs covering all query categories (aggregation, filtering, ranking, time-series, domain-specific).
+
+---
+
+### 5B-3. RAG Retriever (`core/rag_retriever.py`)
+
+At query time, embeds the user question and searches both FAISS indexes.
+
+```python
+class RAGRetriever:
+    def __init__(self, schema_index_path, qsql_store_path, embed_model)
+    def retrieve_tables(self, question: str, k: int = 5) -> list[str]    # top-K M-Schema blocks
+    def retrieve_fewshots(self, question: str, k: int = 3) -> list[dict] # top-K Q-SQL pairs
+    def retrieve(self, question: str) -> dict                             # both combined
+```
+
+**Embedding model:** `BAAI/bge-large-en-v1.5` (same model for both schema and few-shot retrieval — single model load).
+
+---
+
+### 5B-4. Updated Prompt Builder (`core/prompt_builder.py`)
+
+Add a `RAGPromptBuilder` subclass that takes RAG-retrieved context instead of full static schema:
+
+```python
+class RAGPromptBuilder(PromptBuilder):
+    def build_messages_from_rag(self, question: str, retriever: RAGRetriever) -> list[dict]
+```
+
+The system prompt structure changes:
+```
+SYSTEM: [rules + GST domain knowledge]
+
+RETRIEVED SCHEMA (relevant tables only):
+{top-K M-Schema table blocks}
+
+RETRIEVED EXAMPLES (similar questions):
+Q1: ... SQL1: ...
+Q2: ... SQL2: ...
+
+USER: {question}
+```
+
+---
+
+### 5B-5. Updated Pipeline (`core/pipeline.py`)
+
+Add a `RAGPipeline` subclass that wires in the `RAGRetriever`:
+
+```python
+class RAGTextToSQLPipeline(TextToSQLPipeline):
+    def __init__(self, settings: Settings, retriever: RAGRetriever)
+    def ask(self, question: str) -> PipelineResult
+```
+
+The original `TextToSQLPipeline` on `main` is untouched — `RAGPipeline` is a drop-in extension.
+
+---
+
+### 5B-6. XiYanSQL-QwenCoder-7B (When GPU Available)
+
+This is the specialized Text-to-SQL model recommended by the guide. Available on HuggingFace: `XGenerationLab/XiYanSQL-QwenCoder-7B-2502`.
+
+- **BIRD benchmark**: 69.03% execution accuracy (SOTA for single fine-tuned model ≤7B)
+- **Dialects**: SQLite, PostgreSQL, MySQL — all supported
+- **Inference**: vLLM with bfloat16, requires ~10GB VRAM
+- **Prompt format**: XiYanSQL uses its own prompt template (Chinese-language prompt shown in guide — adapt to English for GST use case)
+
+Add `VLLMClient` to `core/llm_client.py` (OpenAI-compatible endpoint via vLLM server):
+```python
+class VLLMClient(LLMClient):
+    def __init__(self, base_url: str, model: str)  # points to local vLLM server
+```
+
+**Run when GPU is available:**
+```bash
+vllm serve XGenerationLab/XiYanSQL-QwenCoder-7B-2502 \
+  --dtype bfloat16 --gpu-memory-utilization 0.85
+```
+
+---
+
+### 5B-7. RAG Ablation Experiments
+
+Run using the Phase 5 benchmark framework (`evaluation/benchmark.py`) with `--branch rag`:
+
+| Experiment | Purpose |
+|---|---|
+| No RAG vs Schema RAG only | Does table retrieval alone help? |
+| No RAG vs Few-shot RAG only | Does dynamic few-shot help more than static? |
+| No RAG vs Schema RAG + Few-shot RAG (combined) | Full RAG benefit |
+| Top-K=3 vs Top-K=5 tables retrieved | Optimal retrieval depth |
+| Q-SQL store size: 10 vs 25 vs 50 pairs | How many examples are needed? |
+| RAG + llama-3.1-8b vs RAG + XiYanSQL-7B | Does RAG help specialized models more? |
+
+These experiments produce the thesis's Phase 5-B results chapter: *"RAG-augmented Text-to-SQL for GST domain"*.
+
+---
+
+### Files to Create (Phase 5-B branch)
+
+- `core/schema_indexer.py` — M-Schema builder + FAISS index
+- `core/rag_retriever.py` — dual FAISS retrieval (schema + few-shots)
+- `evaluation/rag_qsql_store.json` — 50–100 GST Q-SQL pairs
+- `index/` — FAISS index files (gitignored, regenerated on first run)
+- Updates to `core/prompt_builder.py` — `RAGPromptBuilder`
+- Updates to `core/pipeline.py` — `RAGTextToSQLPipeline`
+- Updates to `core/llm_client.py` — `VLLMClient`
+
+### Libraries (Phase 5-B additions)
+
+```
+sentence-transformers>=2.7
+faiss-cpu>=1.8          # or faiss-gpu when GPU available
+# vllm>=0.5            # when GPU available
+```
+
+### Hardware Requirements
+
+| Component | Minimum | For XiYanSQL-7B |
+|-----------|---------|-----------------|
+| GPU VRAM | None (CPU inference possible, slow) | 10 GB (fp16) / 16 GB (bfloat16) |
+| RAM | 16 GB | 32 GB |
+| GPU | None | RTX 3080 / RTX 4090 / A100 |
+
+### Verification
+```bash
+git checkout rag-enhancement
+python core/schema_indexer.py          # builds FAISS index
+python -c "
+from core.rag_retriever import RAGRetriever
+r = RAGRetriever('index/', 'evaluation/rag_qsql_store.json', 'BAAI/bge-large-en-v1.5')
+tables, shots = r.retrieve('Which state has highest IGST collection?')
+print('Tables:', [t[:50] for t in tables])
+print('Shots:', [s['question'] for s in shots])
+"
+```
+
+---
+
 ## Phase 6: Production Hardening (Govt Deployment)
 
 **When:** After thesis demo is validated and green light is received.
@@ -522,9 +730,10 @@ python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/
 - Govt website calls this via REST/AJAX
 
 ### 6C. Local GPU (When Available)
-- Add `VLLMClient` class in `llm_client.py`
-- Serve Qwen2.5-Coder-7B via vLLM (OpenAI-compatible API)
-- Change config: `llm_backend = "vllm"` instead of `"groq"`
+- `VLLMClient` already added in Phase 5-B branch — merge into main
+- Primary model: `XiYanSQL-QwenCoder-7B` (`XGenerationLab/XiYanSQL-QwenCoder-7B-2502`) — specialized Text-to-SQL, SOTA on BIRD (69% EX), supports SQLite/PostgreSQL/MySQL
+- Serve via vLLM: `vllm serve XGenerationLab/XiYanSQL-QwenCoder-7B-2502 --dtype bfloat16`
+- Change config: `llm_backend = "vllm"`, `default_model = "XiYanSQL-QwenCoder-7B"`
 
 ### 6D. Security
 - Audit logging: log every query (question, SQL, result count, user ID)
@@ -545,15 +754,17 @@ python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/
 
 ## Timeline
 
-| Week | Phase | Milestone |
-|------|-------|-----------|
-| 1 | Phase 1 ✅ | Database schema + seed data working |
-| 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq |
-| 3 | Phase 3 | Full pipeline: question → validated SQL → results |
-| 4 | Phase 4 | Streamlit demo ready to show advisor |
-| 5-6 | Phase 5 | Benchmark framework + initial accuracy numbers |
-| 7-8 | Phase 5 | All ablation studies + model comparisons complete |
-| 9-10 | Phase 6 | FastAPI + PostgreSQL + security (when green light) |
+| Week | Phase | Milestone | Branch |
+|------|-------|-----------|--------|
+| 1 | Phase 1 ✅ | Database schema + seed data working | `main` |
+| 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq | `main` |
+| 3 | Phase 3 ✅ | Full pipeline: question → validated SQL → results | `main` |
+| 4 | Phase 4 | Streamlit demo ready to show advisor | `main` |
+| 5-6 | Phase 5 | Benchmark framework + initial accuracy numbers | `main` |
+| 7-8 | Phase 5 | All ablation studies + model comparisons complete | `main` |
+| 9-10 | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline | `rag-enhancement` |
+| 11-12 | Phase 5-B | RAG ablation experiments + comparison vs baseline | `rag-enhancement` |
+| 13-14 | Phase 6 | FastAPI + PostgreSQL + security (when green light) | `main` (merge) |
 
 ---
 
@@ -602,8 +813,11 @@ jupyter>=1.0
 | ≤10B models underperform on complex JOINs | Self-correction handles many failures. Document as thesis finding |
 | Daily request limits slow evaluation | Spread across Groq + OpenRouter. ~1,200 combined req/day is enough for one full eval run |
 | GST schema too big for prompt | 7 tables fit in ~3K tokens. Llama 3.1-8B has 128K context. Not a risk |
-| No GPU when thesis is due | Groq is primary path. Local GPU is Phase 6 nice-to-have |
+| No GPU when thesis is due | Groq is primary path. XiYanSQL + vLLM is Phase 5-B/6 — thesis passes without it |
 | SQL injection in govt deployment | Validator blocks non-SELECT + DB has read-only role. Defense in depth |
+| FAISS retrieval fetches wrong tables | For 7-table schema this is rare. Mitigation: always include invoices+invoice_items as mandatory tables regardless of retrieval |
+| RAG branch diverges too far from main | Keep `RAGPipeline` as a subclass — base pipeline on main is untouched. Merge is clean. |
+| XiYanSQL not available via API | Confirmed — no public API. Use only with local GPU. Phase 5-B experiments without it if GPU unavailable. |
 
 ---
 
@@ -613,4 +827,5 @@ jupyter>=1.0
 2. **Schema enrichment via column descriptions** — quantified through ablation study
 3. **Self-correction for open-source models** — demonstrates iterative error feedback value
 4. **Multi-model comparison under constraints** — practical comparison of sub-10B vs larger models on domain-specific data
-5. **Deployment architecture** — full pipeline from demo to government-deployable API
+5. **RAG-augmented pipeline** (Phase 5-B) — Schema RAG + Few-shot RAG using FAISS; quantifies accuracy gain over static prompting on a domain-specific schema
+6. **Deployment architecture** — full pipeline from demo to government-deployable API
