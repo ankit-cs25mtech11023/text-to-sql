@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     ]
     openrouter_models: list[str] = [
         "qwen/qwen3-coder:free",
+        "qwen/qwen3-next-80b-a3b-instruct:free",
     ]
 
     @field_validator("default_provider")
