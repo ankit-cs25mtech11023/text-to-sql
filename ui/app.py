@@ -30,6 +30,17 @@ MODEL_OPTIONS: dict[str, tuple[str, str]] = {
 
 
 @st.cache_resource
+def get_available_providers() -> set[str]:
+    s = Settings()
+    available = set()
+    if s.groq_api_key:
+        available.add("groq")
+    if s.openrouter_api_key:
+        available.add("openrouter")
+    return available
+
+
+@st.cache_resource
 def load_pipeline(provider: str, model: str) -> TextToSQLPipeline:
     settings = Settings(default_provider=provider, default_model=model)
     return TextToSQLPipeline(settings)
@@ -85,8 +96,17 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Settings")
-        selected_label = st.selectbox("Model", list(MODEL_OPTIONS.keys()))
-        provider, model = MODEL_OPTIONS[selected_label]
+        available = get_available_providers()
+        usable = {
+            label: (prov, mdl)
+            for label, (prov, mdl) in MODEL_OPTIONS.items()
+            if prov in available
+        }
+        if not usable:
+            st.error("No API keys found. Add GROQ_API_KEY or OPENROUTER_API_KEY to .env")
+            st.stop()
+        selected_label = st.selectbox("Model", list(usable.keys()))
+        provider, model = usable[selected_label]
         show_sql_first = st.toggle("Show SQL first", value=True)
         temperature = 0.0
 
