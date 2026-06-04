@@ -94,17 +94,7 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Settings")
-        available = get_available_providers()
-        usable = {
-            label: (prov, mdl)
-            for label, (prov, mdl) in MODEL_OPTIONS.items()
-            if prov in available
-        }
-        if not usable:
-            st.error("No API keys found. Add GROQ_API_KEY or OPENROUTER_API_KEY to .env")
-            st.stop()
-        selected_label = st.selectbox("Model", list(usable.keys()))
-        provider, model = usable[selected_label]
+        provider, model = "groq", "llama-3.3-70b-versatile"
         show_sql_first = st.toggle("Show SQL first", value=True)
         temperature = 0.0
 
