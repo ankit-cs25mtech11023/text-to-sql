@@ -87,8 +87,8 @@ def main() -> None:
         st.header("Settings")
         selected_label = st.selectbox("Model", list(MODEL_OPTIONS.keys()))
         provider, model = MODEL_OPTIONS[selected_label]
-        temperature = st.slider("Temperature", 0.0, 1.0, 0.0, step=0.05)
         show_sql_first = st.toggle("Show SQL first", value=True)
+        temperature = 0.0
 
         st.divider()
         st.subheader("Example Questions")
