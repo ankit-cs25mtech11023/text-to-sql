@@ -36,10 +36,10 @@ def load_pipeline(provider: str, model: str) -> TextToSQLPipeline:
 def _try_chart(df: pd.DataFrame | None) -> bool:
     if df is None or df.empty or len(df.columns) < 2:
         return False
-    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    label_col = df.columns[0]
+    numeric_cols = [c for c in df.select_dtypes(include="number").columns if c != label_col]
     if not numeric_cols:
         return False
-    label_col = df.columns[0]
     value_col = numeric_cols[0]
     if df[label_col].nunique() > 30:
         return False
