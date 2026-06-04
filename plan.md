@@ -830,6 +830,20 @@ jupyter>=1.0
 
 ---
 
+## Future Work / Known Limitations
+
+### Prompt Maintenance Gap
+`config/prompts.py` contains hardcoded sections — TABLE RESPONSIBILITIES, COLUMN OWNERSHIP, FOREIGN KEY RELATIONSHIPS, COMMON JOIN PATTERNS — that describe the schema but are not auto-generated from the database. `SchemaExtractor` reads the live DDL and `descriptions.json`, so those parts stay in sync, but the hardcoded sections will silently go stale if the schema changes.
+
+**Acceptable for thesis** — schema is frozen at 7 tables. Worth noting as a limitation in the write-up.
+
+**Clean fix when needed:**
+- Move TABLE RESPONSIBILITIES and COLUMN OWNERSHIP into `descriptions.json` (already maintained alongside the schema)
+- Auto-generate FOREIGN KEY RELATIONSHIPS inside `SchemaExtractor.get_ddl()` — SQLAlchemy's `inspect().get_foreign_keys()` already reads this data, just not emitting it separately
+- COMMON JOIN PATTERNS stays hardcoded — it is GST domain knowledge, not derivable from schema metadata alone
+
+---
+
 ## Thesis Contribution Framing
 
 1. **Domain-specific Text-to-SQL for Indian GST data** — novel application domain, no prior work
