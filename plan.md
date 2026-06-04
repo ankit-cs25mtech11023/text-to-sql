@@ -292,6 +292,8 @@ USER: {question}
 
 **Start zero-shot** (saves tokens on Groq free tier). Few-shot configurable for ablation in Phase 5.
 
+**Prompt structure (beyond rules):** System prompt includes four explicit sections before the DDL — TABLE RESPONSIBILITIES (what each table stores), COLUMN OWNERSHIP (which table each key column belongs to), FOREIGN KEY RELATIONSHIPS, and COMMON JOIN PATTERNS. This was added after observing that 8B models consistently misattribute tax columns (cgst_amount etc.) to `invoices` instead of `invoice_items`, causing 3-attempt failures. The explicit mapping generalises across all query types, not just tax queries.
+
 **Token behavior:** LLM APIs are stateless — every call must include the full context. The system prompt (~10K tokens) is sent with every query; there is no "send once" mechanism. Groq mitigates this with **implicit prefix caching**: identical system prompts are cached server-side, so repeated calls with the same schema context don't incur full compute cost. For the Streamlit UI, conversation history is accumulated across turns (system sent once, then user/assistant pairs grow) so within a chat session the schema is not re-sent redundantly.
 
 ### 2D. SQL Generator (`core/sql_generator.py`)
