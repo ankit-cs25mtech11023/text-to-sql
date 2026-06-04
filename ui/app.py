@@ -5,7 +5,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pandas as pd
 import streamlit as st
 
 from config.settings import Settings
@@ -25,8 +24,6 @@ EXAMPLE_QUESTIONS = [
 MODEL_OPTIONS: dict[str, tuple[str, str]] = {
     "llama-3.1-8b-instant (Groq)": ("groq", "llama-3.1-8b-instant"),
     "llama-3.3-70b-versatile (Groq)": ("groq", "llama-3.3-70b-versatile"),
-    "qwen3-coder:free (OpenRouter)": ("openrouter", "qwen/qwen3-coder:free"),
-    "qwen3-next-80b:free (OpenRouter)": ("openrouter", "qwen/qwen3-next-80b-a3b-instruct:free"),
 }
 
 
