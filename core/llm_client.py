@@ -16,16 +16,23 @@ class LLMClient(ABC):
         pass
 
 
+_GROQ_TPM: dict[str, int] = {
+    "llama-3.1-8b-instant": 6_000,
+    "llama-3.3-70b-versatile": 12_000,
+}
+_GROQ_TPM_DEFAULT = 6_000
+
+
 class GroqClient(LLMClient):
-    # Free tier: 30 RPM, 6K TPM
+    # Free tier: 30 RPM, model-dependent TPM
     _RPM_LIMIT = 30
-    _TPM_LIMIT = 6000
     _WINDOW = 60.0
     _MIN_INTERVAL = _WINDOW / _RPM_LIMIT  # 2.0s
 
     def __init__(self, api_key: str, model: str = "llama-3.1-8b-instant") -> None:
         self._client = Groq(api_key=api_key)
         self.model = model
+        self._tpm_limit = _GROQ_TPM.get(model, _GROQ_TPM_DEFAULT)
         self._last_call: float = 0.0
         self._token_log: list[tuple[float, int]] = []  # (timestamp, tokens_used)
 
@@ -60,7 +67,7 @@ class GroqClient(LLMClient):
             now = time.monotonic()
             cutoff = now - self._WINDOW
             self._token_log = [(t, tok) for t, tok in self._token_log if t > cutoff]
-            if sum(tok for _, tok in self._token_log) + est <= self._TPM_LIMIT:
+            if sum(tok for _, tok in self._token_log) + est <= self._tpm_limit:
                 break
             # Sleep until the oldest logged call exits the 60s window
             sleep_for = self._token_log[0][0] + self._WINDOW - now + 0.5
