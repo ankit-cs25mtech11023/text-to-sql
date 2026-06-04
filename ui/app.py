@@ -1,4 +1,6 @@
 import sys
+import threading
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -33,20 +35,6 @@ def load_pipeline(provider: str, model: str) -> TextToSQLPipeline:
     return TextToSQLPipeline(settings)
 
 
-def _try_chart(df: pd.DataFrame | None) -> bool:
-    if df is None or df.empty or len(df.columns) < 2:
-        return False
-    label_col = df.columns[0]
-    numeric_cols = [c for c in df.select_dtypes(include="number").columns if c != label_col]
-    if not numeric_cols:
-        return False
-    value_col = numeric_cols[0]
-    if df[label_col].nunique() > 30:
-        return False
-    st.bar_chart(df.set_index(label_col)[value_col])
-    return True
-
-
 def _render_response(payload: dict, show_sql_first: bool) -> None:
     if not payload["success"]:
         st.error(f"Failed after {payload['attempts']} attempt(s): {payload['error']}")
@@ -56,9 +44,9 @@ def _render_response(payload: dict, show_sql_first: bool) -> None:
         return
 
     if show_sql_first:
-        tab_sql, tab_results, tab_chart = st.tabs(["SQL", "Results", "Chart"])
+        tab_sql, tab_results = st.tabs(["SQL", "Results"])
     else:
-        tab_results, tab_sql, tab_chart = st.tabs(["Results", "SQL", "Chart"])
+        tab_results, tab_sql = st.tabs(["Results", "SQL"])
 
     with tab_results:
         df = payload["data"]
@@ -70,14 +58,22 @@ def _render_response(payload: dict, show_sql_first: bool) -> None:
     with tab_sql:
         st.code(payload["sql"], language="sql")
 
-    with tab_chart:
-        if not _try_chart(payload["data"]):
-            st.info("No chart available for this result shape.")
-
     st.caption(
         f"Execution: {payload['execution_time_ms']:.0f} ms • "
         f"Attempts: {payload['attempts']}"
     )
+
+
+def _make_error_payload(error: str, show_sql_first: bool) -> dict:
+    return {
+        "success": False,
+        "sql": "",
+        "data": None,
+        "error": error,
+        "attempts": 0,
+        "execution_time_ms": 0.0,
+        "show_sql_first": show_sql_first,
+    }
 
 
 def main() -> None:
@@ -108,49 +104,79 @@ def main() -> None:
             if msg["role"] == "user":
                 st.write(msg["content"])
             else:
-                # use the tab order that was active when the response was generated
                 _render_response(msg["payload"], msg["payload"]["show_sql_first"])
 
+    # ── Active query polling loop ─────────────────────────────────────────────
+    qs = st.session_state.get("_qs")
+    if qs and qs["running"]:
+        with st.chat_message("assistant"):
+            st.write("⏳ Generating SQL and executing...")
+            if st.button("⏹ Stop", type="secondary", key="stop_query"):
+                qs["running"] = False
+                payload = _make_error_payload(
+                    "Query cancelled by user.", qs["show_sql_first"]
+                )
+                st.session_state.messages.append({"role": "assistant", "payload": payload})
+                del st.session_state["_qs"]
+                st.rerun()
+
+        if not qs["thread"].is_alive():
+            result_or_exc = qs["result_box"][0]
+            if isinstance(result_or_exc, Exception):
+                payload = _make_error_payload(str(result_or_exc), qs["show_sql_first"])
+            elif result_or_exc is None:
+                payload = _make_error_payload("No result returned.", qs["show_sql_first"])
+            else:
+                r = result_or_exc
+                payload = {
+                    "success": r.success,
+                    "sql": r.sql,
+                    "data": r.data,
+                    "error": r.error or "Unknown error",
+                    "attempts": r.attempts,
+                    "execution_time_ms": r.execution_time_ms,
+                    "show_sql_first": qs["show_sql_first"],
+                }
+            st.session_state.messages.append({"role": "assistant", "payload": payload})
+            del st.session_state["_qs"]
+            st.rerun()
+        else:
+            time.sleep(0.5)
+            st.rerun()
+        return
+
+    # ── Normal chat input ─────────────────────────────────────────────────────
     question: str | None = None
     if prompt := st.chat_input("Ask a question about GST data..."):
         question = prompt
-        st.session_state.pop("pending_question", None)  # discard stale sidebar click
+        st.session_state.pop("pending_question", None)
     elif "pending_question" in st.session_state:
         question = st.session_state.pop("pending_question")
 
     if question:
         st.session_state.messages.append({"role": "user", "content": question})
-        with st.chat_message("user"):
-            st.write(question)
 
         pipeline = load_pipeline(provider, model)
         pipeline._settings.temperature = temperature
 
-        with st.chat_message("assistant"):
-            with st.spinner("Generating SQL and executing..."):
-                try:
-                    result = pipeline.ask(question)
-                    payload: dict = {
-                        "success": result.success,
-                        "sql": result.sql,
-                        "data": result.data,
-                        "error": result.error or "Unknown error",
-                        "attempts": result.attempts,
-                        "execution_time_ms": result.execution_time_ms,
-                        "show_sql_first": show_sql_first,
-                    }
-                except Exception as exc:
-                    payload = {
-                        "success": False,
-                        "sql": "",
-                        "data": None,
-                        "error": str(exc),
-                        "attempts": 0,
-                        "execution_time_ms": 0.0,
-                        "show_sql_first": show_sql_first,
-                    }
-            _render_response(payload, show_sql_first)
-            st.session_state.messages.append({"role": "assistant", "payload": payload})
+        result_box: list = [None]
+
+        def _run(q: str = question) -> None:
+            try:
+                result_box[0] = pipeline.ask(q)
+            except Exception as exc:
+                result_box[0] = exc
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+        st.session_state["_qs"] = {
+            "running": True,
+            "thread": thread,
+            "result_box": result_box,
+            "show_sql_first": show_sql_first,
+        }
+        st.rerun()
 
 
 if __name__ == "__main__":
