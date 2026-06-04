@@ -28,7 +28,7 @@
 
 ## Phase 4: Streamlit UI
 
-- [ ] `ui/app.py` — Chat interface with SQL/Results/Chart tabs
+- [x] `ui/app.py` — Chat interface with SQL/Results/Chart tabs
 - [ ] Verification: All 8 example questions work in browser
 
 ## Phase 5: Evaluation & Benchmarking
