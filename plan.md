@@ -133,9 +133,16 @@ Filed by deductors (govt depts, PSUs) who withhold GST-TDS from supplier payment
 Will replace `descriptions.json`. Structure follows existing format but covers all 3 modules. LLM-HIDE columns are omitted. Complex columns (like `fy_flag`, `ret_period`, padded strings) get explicit LLM guidance in descriptions.
 
 ### Files to Create
-- `database/seed_data_official.py` — PostgreSQL seed script for all 3 modules
-- `database/descriptions_official.json` — Column descriptions for LLM context (all 3 modules)
-- Update `database/connection.py` — support PostgreSQL via `DATABASE_URL`
+- `database/seed_data_official.py` — PostgreSQL seed script for all 3 modules ✅
+- `database/descriptions_official.json` — Column descriptions for LLM context (all 21 tables) ✅
+- Update `database/connection.py` — support PostgreSQL via `DATABASE_URL` ✅
+
+### Known Blocker: SchemaExtractor is single-schema
+`core/schema_extractor.py` uses `inspector.get_table_names()` which only returns the **`public`** schema by default. The official schemas span **three** schemas (`public`, `live_reports`, `common`), and the LLM must emit **schema-qualified** table names (e.g. `live_reports.r3b_...`). Before the pipeline can run on the new schemas, `SchemaExtractor` must:
+1. Iterate all three schemas via `inspector.get_table_names(schema=...)` and `get_schema_names()`
+2. Emit schema-qualified names in DDL, descriptions, and sample-row blocks
+3. Quote reserved/case-sensitive identifiers (`"range"`, `"current_date"`, `"InvVal"`, `"QtyUqc"`) in generated DDL and sample-row SELECTs
+The `descriptions_official.json` keys are already schema-qualified, so the descriptions block is ready; only the live-inspection paths (DDL + sample rows) need the multi-schema fix.
 
 ### Libraries
 - `psycopg2-binary` (PostgreSQL driver)

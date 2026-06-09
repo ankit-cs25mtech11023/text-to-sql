@@ -17,8 +17,9 @@
 - [x] `database/seed_data_official.py` — Seed PostgreSQL with toy data (EWB + GSTR-3B + GSTR-7)
 - [x] Update `.env.example` — DATABASE_URL=postgresql:///gst_official
 - [x] Verification: EWB=20 bills/23 items, GSTR-3B=63 returns (48 fy8+15 fy9), GSTR-7=12 returns/27 TDS/54 inv
-- [ ] `database/descriptions_official.json` — Column descriptions for all 3 modules
+- [x] `database/descriptions_official.json` — Column descriptions for all 21 tables (3 modules + 2 common decode tables); LLM-HIDE columns omitted; schema-qualified keys
 - [x] Update `database/connection.py` — PostgreSQL engine; SQLite kept as fallback
+- [ ] Update `core/schema_extractor.py` — multi-schema support (inspect public + live_reports + common; emit schema-qualified table names)
 - [ ] *(pending)* 4th schema from guide — TBD
 
 ## Phase 2: Core Pipeline (LLM Integration)
