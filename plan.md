@@ -50,158 +50,111 @@ Dev/
 
 ## Phase 1: Database Setup
 
-**Goal:** Create a GST-like relational schema in SQLite with synthetic data.
+**Goal:** Create a PostgreSQL database using the official government GST schemas provided by the guide, and seed it with realistic toy data for development and testing.
 
-### Tables
+**Status:** In progress — schemas received, seed data being written.
 
-**`suppliers`** (master data)
-```sql
-CREATE TABLE suppliers (
-    supplier_id         INTEGER PRIMARY KEY,
-    gstin               TEXT NOT NULL UNIQUE,       -- 15-char GST identification number
-    legal_name          TEXT NOT NULL,
-    trade_name          TEXT,
-    state_code          TEXT NOT NULL,              -- 2-digit state code (e.g., '27' for Maharashtra)
-    state_name          TEXT NOT NULL,
-    registration_type   TEXT DEFAULT 'Regular',     -- Regular, Composition, etc.
-    created_at          DATE NOT NULL
-);
-```
+### Official Schemas (provided by guide)
 
-**`buyers`** (master data)
-```sql
-CREATE TABLE buyers (
-    buyer_id            INTEGER PRIMARY KEY,
-    gstin               TEXT,                       -- NULL for unregistered B2C buyers
-    legal_name          TEXT,
-    state_code          TEXT NOT NULL,
-    state_name          TEXT NOT NULL,
-    buyer_type          TEXT NOT NULL               -- 'B2B', 'B2CL', 'B2CS', 'EXPORT'
-);
-```
+Three modules are available now; a 4th will be provided later.
 
-**`invoices`** (core transaction table — GSTR-1 Table 4/5/6/7)
-```sql
-CREATE TABLE invoices (
-    invoice_id          INTEGER PRIMARY KEY,
-    invoice_number      TEXT NOT NULL,
-    invoice_date        DATE NOT NULL,
-    invoice_type        TEXT NOT NULL,              -- 'B2B', 'B2CL', 'B2CS', 'EXPORT', 'CDNR', 'CDNUR'
-    supplier_id         INTEGER NOT NULL REFERENCES suppliers(supplier_id),
-    buyer_id            INTEGER REFERENCES buyers(buyer_id),
-    place_of_supply     TEXT NOT NULL,              -- state code where supply is made
-    reverse_charge      BOOLEAN DEFAULT FALSE,
-    invoice_value       REAL NOT NULL,              -- total invoice value including tax
-    return_period       TEXT NOT NULL,              -- MMYYYY format e.g., '032026'
-    filing_status       TEXT DEFAULT 'Filed'
-);
-```
+| Module | File | Tables | Description |
+|--------|------|--------|-------------|
+| EWB | `database/Official_Schemas/ewb.sql` | 10 | E-Way Bill — Part-A (bill + items) and Part-B (vehicle/cancel/extend/reject events) |
+| GSTR-3B | `database/Official_Schemas/gstr3b_new.sql` | 1 (partitioned) | Monthly summary return — single denormalized flat table, partitioned by FY |
+| GSTR-7 | `database/Official_Schemas/gstr7.sql` | 8 | TDS return — deductor/deductee TDS, invoice detail, amendments, tax payable/paid |
+| *(4th)* | TBD | TBD | To be provided by guide |
 
-**`invoice_items`** (line items with tax breakup)
-```sql
-CREATE TABLE invoice_items (
-    item_id             INTEGER PRIMARY KEY,
-    invoice_id          INTEGER NOT NULL REFERENCES invoices(invoice_id),
-    hsn_code            TEXT NOT NULL,              -- Harmonized System of Nomenclature
-    description         TEXT,
-    quantity            REAL,
-    unit                TEXT,                       -- UQC: units like KGS, NOS, MTR
-    taxable_value       REAL NOT NULL,
-    tax_rate            REAL NOT NULL,              -- 0, 5, 12, 18, 28
-    cgst_amount         REAL DEFAULT 0,             -- Central GST (intra-state)
-    sgst_amount         REAL DEFAULT 0,             -- State GST (intra-state)
-    igst_amount         REAL DEFAULT 0,             -- Integrated GST (inter-state)
-    cess_amount         REAL DEFAULT 0
-);
-```
+### EWB Module (10 tables — `public` schema)
 
-**`hsn_master`** (reference table)
-```sql
-CREATE TABLE hsn_master (
-    hsn_code            TEXT PRIMARY KEY,
-    description         TEXT NOT NULL,
-    chapter             TEXT,                       -- first 2 digits
-    default_tax_rate    REAL
-);
-```
+**Part-A tree** (the bill itself):
+- `tbl_ewb_parta` — batch parent (per state/period)
+- `tbl_ewb_parta_ewb` — MAIN: one row per e-way bill (frgstin, togstin, ewbno, values, status)
+- `tbl_ewb_parta_ewb_itemlist` — item lines within each bill (HSN, qty, rates)
 
-**`state_codes`** (reference)
-```sql
-CREATE TABLE state_codes (
-    state_code          TEXT PRIMARY KEY,
-    state_name          TEXT NOT NULL,
-    state_type          TEXT                        -- 'State', 'UT'
-);
-```
+**Part-B tree** (events on the bill):
+- `tbl_ewb_partb` — batch parent
+- `tbl_ewb_partb_ewb` — MAIN Part-B: one row per EWB event packet (ewb_no, fin_valid_dt)
+- `tbl_ewb_partb_ewb_partbdet` — vehicle / transporter update details
+- `tbl_ewb_partb_ewb_canceldet` — cancellation events
+- `tbl_ewb_partb_ewb_extenddet` — validity extension events
+- `tbl_ewb_partb_ewb_rejdtl` — rejection events
+- `tbl_ewb_partb_ewb_transdet` — transporter assignment / change events
 
-**`export_invoices`** (GSTR-1 Table 6 specifics)
-```sql
-CREATE TABLE export_invoices (
-    export_id           INTEGER PRIMARY KEY,
-    invoice_id          INTEGER NOT NULL REFERENCES invoices(invoice_id),
-    port_code           TEXT,
-    shipping_bill_no    TEXT,
-    shipping_bill_date  DATE,
-    export_type         TEXT NOT NULL               -- 'WITH_PAYMENT', 'WITHOUT_PAYMENT'
-);
-```
+**Cross-module bridge:** `tbl_ewb_parta_ewb.ewbno = tbl_ewb_partb_ewb.ewb_no` (logical, no enforced FK).
+
+**LLM-HIDE columns** (exclude from prompt context): `usertyp`, `cessnonadvolval`, `cessadvol`, `cessnonadvol`, `ssupdesc` (usually blank), denormalized `ewb_no` fields in Part-B child tables.
+
+### GSTR-3B Module (1 table — `live_reports` schema)
+
+Single denormalized materialized view: `live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned`
+
+- One row per `(gstin, ret_period)` — one row per filed GSTR-3B return
+- Partition key: `fy_flag` (1=FY2017-18 … 11=FY2027-28) — always include in WHERE
+- ~145 columns covering: geo (division/range/unit), taxpayer master, outward supplies (3.1a–e), ITC available/reversed/net (Sec 4), payments (Sec 6.1), RCM breakup, ECO supplies, `state_income` KPI
+- Decode joins: `common.mst_fy_years_t` (fy_flag → "2024-25"), `common.mst_3bd_months_t` (ret_period → month name/quarter)
+
+### GSTR-7 Module (8 tables — `public` schema)
+
+Filed by deductors (govt depts, PSUs) who withhold GST-TDS from supplier payments.
+
+- `tbl_gst_rtn_r7` — MAIN: gstin (deductor) + fp (return period). One row per filed return.
+- `tbl_gst_rtn_r7_tds` — TDS deductee-wise totals (gstin_ded, amt_ded, iamt/camt/samt)
+- `tbl_gst_rtn_r7_tds_inv` — TDS invoice-level breakdown
+- `tbl_gst_rtn_r7_tdsa` — TDS amendments (original `o*` + revised values)
+- `tbl_gst_rtn_r7_tdsa_inv` — TDSA invoice-level breakdown
+- `tbl_gst_rtn_r7_tax_pay` — Tax payable (declared liability)
+- `tbl_gst_rtn_r7_tax_paid` — Join table for settlements
+- `tbl_gst_rtn_r7_tax_paid_pd_by_cash` — Tax actually paid via cash ledger
+
+**Key quirk:** FK columns to main table are named `tbl_gst_rtn_r7` (no `id` prefix) — source DB naming anomaly.
+
+### Important Schema Conventions
+
+- **Dates stored as strings:** EWB and GSTR-7 dates are VARCHAR in `DD/MM/YYYY HH:MM:SS AM/PM` or `DD-MM-YYYY` format — use `TO_DATE()` or string comparisons, not direct DATE operations.
+- **Padded strings:** `ssuptyp`, `transmode`, `updid` often have trailing spaces — use `TRIM()` or `LIKE` not `=`.
+- **Case-sensitive columns:** `"InvVal"` and `"QtyUqc"` in EWB must be double-quoted in SQL.
+- **`range` keyword:** `range` column in GSTR-3B must be double-quoted (`"range"`) — PostgreSQL reserved word.
+- **`current_date` column:** Must be double-quoted (`"current_date"`) — PostgreSQL reserved function.
+- **GSTR-3B partition:** Always include `fy_flag = N` in WHERE for partitioned table scans.
 
 ### Seed Data Strategy
 
-`seed_data.py` generates:
-- 50 suppliers across 10 Indian states
-- 200 buyers (mix of B2B registered, B2C large, B2C small, export)
-- 5,000 invoices across 12 months (enables time-series queries)
-- 15,000 invoice items (avg 3 items per invoice)
-- Realistic distributions: 80% intra-state (CGST+SGST), 20% inter-state (IGST)
-- Tax rates following actual GST slabs: 0%, 5%, 12%, 18%, 28%
-- HSN codes from real chapters (e.g., 8471 for computers, 6109 for T-shirts)
-- Use `Faker` library with Indian locale for names/addresses
+`database/seed_data_official.py` generates toy data for all 3 modules:
 
-### Column Descriptions (`descriptions.json`)
+**EWB:** ~3 Part-A batches, ~20 e-way bills (mix of intra-state CGST/SGST and inter-state IGST), ~40 item lines, ~15 Part-B events (vehicles, 3 cancellations, 2 extensions, 1 rejection, 2 transporter changes)
 
-Critical for LLM accuracy. Structure:
-```json
-{
-  "invoices": {
-    "table_description": "Contains all GST invoice records filed under GSTR-1 return.",
-    "columns": {
-      "invoice_type": "Type of supply: 'B2B' (business-to-business), 'B2CL' (B2C over 2.5 lakh), 'B2CS' (B2C small), 'EXPORT', 'CDNR' (credit note registered), 'CDNUR' (credit note unregistered)",
-      "place_of_supply": "2-digit state code. Determines if IGST or CGST+SGST applies.",
-      "return_period": "Filing period in MMYYYY format. E.g., '032026' = March 2026.",
-      "reverse_charge": "TRUE if tax payable by buyer instead of seller (Section 9(3)/9(4) CGST Act)"
-    }
-  },
-  "invoice_items": {
-    "table_description": "Line items within each invoice. Tax breakup at item level.",
-    "columns": {
-      "cgst_amount": "Central GST. Non-zero only for intra-state supplies.",
-      "sgst_amount": "State GST. Always equals CGST for intra-state supplies.",
-      "igst_amount": "Integrated GST. Non-zero only for inter-state supplies or exports.",
-      "taxable_value": "Value before tax. Tax is calculated on this amount.",
-      "hsn_code": "Harmonized System code. First 2 digits = chapter, first 4 = heading."
-    }
-  }
-}
-```
+**GSTR-3B:** ~10 Gujarat taxpayers × 8 months = ~80 rows across fy_flag=8 (FY2024-25) and fy_flag=9 (FY2025-26); includes `common.mst_fy_years_t` and `common.mst_3bd_months_t` decode tables
+
+**GSTR-7:** ~4 deductors × 3 periods = ~12 returns, ~25 TDS rows, ~50 TDS invoice rows, ~5 amendments, tax payable and paid records
+
+### Column Descriptions (`database/descriptions_official.json`)
+
+Will replace `descriptions.json`. Structure follows existing format but covers all 3 modules. LLM-HIDE columns are omitted. Complex columns (like `fy_flag`, `ret_period`, padded strings) get explicit LLM guidance in descriptions.
 
 ### Files to Create
-- `database/schema.sql`
-- `database/seed_data.py`
-- `database/descriptions.json`
-- `database/connection.py`
+- `database/seed_data_official.py` — PostgreSQL seed script for all 3 modules
+- `database/descriptions_official.json` — Column descriptions for LLM context (all 3 modules)
+- Update `database/connection.py` — support PostgreSQL via `DATABASE_URL`
 
 ### Libraries
-- `sqlite3` (stdlib)
-- `sqlalchemy`
-- `Faker`
+- `psycopg2-binary` (PostgreSQL driver)
+- `sqlalchemy` (already installed)
+- `Faker` (already installed)
 
 ### Verification
 ```bash
-# After running seed_data.py:
-sqlite3 gst_demo.db "SELECT COUNT(*) FROM invoices;"
-# Expected: ~5000
+# After running seed_data_official.py:
+psql gst_official -c "SELECT COUNT(*) FROM public.tbl_ewb_parta_ewb;"  -- expect ~20
+psql gst_official -c "SELECT COUNT(*) FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned;"  -- expect ~80
+psql gst_official -c "SELECT COUNT(*) FROM public.tbl_gst_rtn_r7;"  -- expect ~12
 ```
+
+### Legacy Files (superseded)
+The following files from the original toy schema are superseded but kept for reference:
+- `database/schema.sql` — original 7-table SQLite schema (not used)
+- `database/seed_data.py` — SQLite seed data (not used)
+- `database/descriptions.json` — descriptions for old schema (not used)
 
 ---
 
@@ -765,15 +718,16 @@ print('Shots:', [s['question'] for s in shots])
 
 | Week | Phase | Milestone | Branch |
 |------|-------|-----------|--------|
-| 1 | Phase 1 ✅ | Database schema + seed data working | `main` |
+| 1 | Phase 1 (original) ✅ | SQLite toy schema + seed data — superseded | `main` |
 | 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq | `main` |
 | 3 | Phase 3 ✅ | Full pipeline: question → validated SQL → results | `main` |
-| 4 | Phase 4 | Streamlit demo ready to show advisor | `main` |
-| 5 | Phase 5 | 100 gold Q-SQL pairs + benchmark runner + baseline evaluation (~130 calls) | `main` |
-| 6-7 | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation (~130 calls) | `rag-enhancement` |
-| 8 | Phase 5-B | Baseline vs RAG comparison — primary thesis result | `rag-enhancement` |
+| 4 | Phase 4 ✅ | Streamlit demo built | `main` |
+| Now | Phase 1 (redo) 🔄 | Official schemas (EWB, GSTR-3B, GSTR-7) + PostgreSQL toy data | `main` |
+| Next | Phase 1 (redo) | 4th schema + update prompts/descriptions for new tables | `main` |
+| TBD | Phase 5 | Gold Q-SQL pairs for official schemas + baseline evaluation | `main` |
+| TBD | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation | `rag-enhancement` |
 | TBD | Ablations | All deferred ablation studies — resume when API constraints lift | `main` / `rag-enhancement` |
-| TBD | Phase 6 | FastAPI + PostgreSQL + security (when green light) | `main` (merge) |
+| TBD | Phase 6 | FastAPI + security hardening (when green light) | `main` (merge) |
 
 ---
 
@@ -804,8 +758,10 @@ pytest>=8.0
 # Notebooks
 jupyter>=1.0
 
+# Database (Phase 1 redo — now required)
+psycopg2-binary>=2.9
+
 # Production (Phase 6 — uncomment when needed)
-# psycopg2-binary>=2.9
 # fastapi>=0.111
 # uvicorn>=0.30
 # slowapi>=0.1
@@ -821,10 +777,12 @@ jupyter>=1.0
 | Provider drops/changes free tier models | LLM client is abstract — switch provider or model in config |
 | ≤10B models underperform on complex JOINs | Self-correction handles many failures. Document as thesis finding |
 | Daily request limits slow evaluation | Spread across Groq + OpenRouter. ~1,200 combined req/day is enough for one full eval run |
-| GST schema too big for prompt | 7 tables fit in ~3K tokens. Llama 3.1-8B has 128K context. Not a risk |
+| Official schemas too large for prompt | 19+ tables with dense column comments. RAG (Phase 5-B) is the natural fix — retrieve only relevant tables per query. Static prompt approach requires careful column pruning (use LLM-HIDE annotations). |
+| Schema complexity: padded strings, quoted columns, VARCHAR dates | Document in descriptions_official.json as explicit LLM instructions (TRIM, TO_DATE, double-quote). Test with representative queries. |
+| 4th schema not yet received | Build pipeline to be modular — add new schema/descriptions without touching core pipeline |
 | No GPU when thesis is due | Groq is primary path. XiYanSQL + vLLM is Phase 5-B/6 — thesis passes without it |
 | SQL injection in govt deployment | Validator blocks non-SELECT + DB has read-only role. Defense in depth |
-| FAISS retrieval fetches wrong tables | For 7-table schema this is rare. Mitigation: always include invoices+invoice_items as mandatory tables regardless of retrieval |
+| FAISS retrieval fetches wrong tables | 19+ tables makes this more likely than before. Mitigation: always include core tables (tbl_ewb_parta_ewb, r3b_*, tbl_gst_rtn_r7) regardless of retrieval |
 | RAG branch diverges too far from main | Keep `RAGPipeline` as a subclass — base pipeline on main is untouched. Merge is clean. |
 | XiYanSQL not available via API | Confirmed — no public API. Use only with local GPU. Phase 5-B experiments without it if GPU unavailable. |
 
@@ -833,14 +791,17 @@ jupyter>=1.0
 ## Future Work / Known Limitations
 
 ### Prompt Maintenance Gap
-`config/prompts.py` contains hardcoded sections — TABLE RESPONSIBILITIES, COLUMN OWNERSHIP, FOREIGN KEY RELATIONSHIPS, COMMON JOIN PATTERNS — that describe the schema but are not auto-generated from the database. `SchemaExtractor` reads the live DDL and `descriptions.json`, so those parts stay in sync, but the hardcoded sections will silently go stale if the schema changes.
+`config/prompts.py` contains hardcoded sections — TABLE RESPONSIBILITIES, COLUMN OWNERSHIP, FOREIGN KEY RELATIONSHIPS, COMMON JOIN PATTERNS — that describe the schema but are not auto-generated from the database. With the pivot to official schemas (19+ tables), this gap is now larger: the hardcoded sections must be rewritten for EWB, GSTR-3B, and GSTR-7.
 
-**Acceptable for thesis** — schema is frozen at 7 tables. Worth noting as a limitation in the write-up.
+**Plan:** Rewrite the prompt sections for the official schemas when `descriptions_official.json` is ready. The LLM-HIDE annotations in the official schema files tell us which columns to exclude from the prompt.
 
-**Clean fix when needed:**
-- Move TABLE RESPONSIBILITIES and COLUMN OWNERSHIP into `descriptions.json` (already maintained alongside the schema)
-- Auto-generate FOREIGN KEY RELATIONSHIPS inside `SchemaExtractor.get_ddl()` — SQLAlchemy's `inspect().get_foreign_keys()` already reads this data, just not emitting it separately
-- COMMON JOIN PATTERNS stays hardcoded — it is GST domain knowledge, not derivable from schema metadata alone
+**Clean fix (Phase 5-B or later):**
+- Move TABLE RESPONSIBILITIES and COLUMN OWNERSHIP into `descriptions_official.json`
+- Auto-generate FOREIGN KEY RELATIONSHIPS inside `SchemaExtractor` — SQLAlchemy `inspect().get_foreign_keys()` reads this directly
+- COMMON JOIN PATTERNS stays hardcoded — it is domain knowledge (Part-A ↔ Part-B bridge via ewb_no, GSTR-7 FK naming quirk, etc.) not derivable from schema metadata alone
+
+### Schema Pivot (Phase 1 redo)
+The original 7-table SQLite toy schema (`database/schema.sql`) is superseded by the official government schemas. Files kept for reference but not used by the pipeline. The pipeline itself (Phases 2–4 code) is database-agnostic — only `database/connection.py`, `config/settings.py`, `config/prompts.py`, and `database/descriptions_official.json` need updating for the new schemas.
 
 ---
 

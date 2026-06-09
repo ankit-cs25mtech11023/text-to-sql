@@ -1,22 +1,35 @@
 # Implementation Progress
 
-## Phase 1: Database Setup
+## Phase 1 (original — superseded): SQLite Toy Schema
 
-- [x] `database/schema.sql` — DDL for all 7 GST tables
-- [x] `database/seed_data.py` — Synthetic GST data (50 suppliers, 200 buyers, 5K invoices, 14994 items)
-- [x] `database/descriptions.json` — Column descriptions for LLM context
-- [x] `database/connection.py` — SQLAlchemy engine factory
-- [x] Verification: 5000 invoices, 14994 items, 464 export records confirmed
+> Replaced by official government schemas. Files kept for reference.
+
+- [x] `database/schema.sql` — 7-table SQLite schema (legacy, not used)
+- [x] `database/seed_data.py` — SQLite synthetic data (legacy, not used)
+- [x] `database/descriptions.json` — descriptions for old schema (legacy, not used)
+- [x] `database/connection.py` — SQLAlchemy engine factory (needs PostgreSQL update)
+
+## Phase 1 (redo): Official Government Schemas + PostgreSQL
+
+- [x] `database/Official_Schemas/ewb.sql` — EWB schema received (10 tables)
+- [x] `database/Official_Schemas/gstr3b_new.sql` — GSTR-3B schema received (1 partitioned table)
+- [x] `database/Official_Schemas/gstr7.sql` — GSTR-7 schema received (8 tables)
+- [ ] `database/seed_data_official.py` — Seed PostgreSQL with toy data (EWB + GSTR-3B + GSTR-7)
+- [ ] `database/descriptions_official.json` — Column descriptions for all 3 modules
+- [ ] Update `database/connection.py` — PostgreSQL support via DATABASE_URL
+- [ ] Update `.env.example` — DATABASE_URL pointing to `gst_official` PostgreSQL DB
+- [ ] Verification: row counts confirmed in all 3 modules
+- [ ] *(pending)* 4th schema from guide — TBD
 
 ## Phase 2: Core Pipeline (LLM Integration)
 
-- [x] `config/settings.py` — Central config with Pydantic
-- [x] `config/prompts.py` — All LLM prompt templates (zero-shot + few-shot + correction)
+- [x] `config/settings.py` — Central config with Pydantic (needs DATABASE_URL update)
+- [ ] `config/prompts.py` — Needs rewrite for official schemas (EWB/GSTR-3B/GSTR-7 table/column context)
 - [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient with rate limiting
 - [x] `core/schema_extractor.py` — DB metadata + descriptions → context string
 - [x] `core/prompt_builder.py` — Assembles system prompt + schema + question
 - [x] `core/sql_generator.py` — Question → prompt → LLM → extract SQL
-- [x] Verification: `SQLGenerator.generate()` tested — correct SQL for simple, multi-join, and ranking queries
+- [ ] Verification: re-test with official schema queries once seed data + descriptions ready
 
 ## Phase 3: SQL Validation & Execution
 
