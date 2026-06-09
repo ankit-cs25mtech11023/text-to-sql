@@ -25,7 +25,7 @@
 ## Phase 2: Core Pipeline (LLM Integration)
 
 - [x] `config/settings.py` — Updated: database_url→postgresql:///gst_official, descriptions_path→descriptions_official.json
-- [ ] `config/prompts.py` — Needs rewrite for official schemas (EWB/GSTR-3B/GSTR-7 table/column context)
+- [x] `config/prompts.py` — Rewritten for official schemas: PostgreSQL dialect, 3-module map, join paths, quoting/date/padding conventions, 5 few-shot examples (all verified to execute)
 - [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient with rate limiting
 - [x] `core/schema_extractor.py` — DB metadata + descriptions → context string
 - [x] `core/prompt_builder.py` — Assembles system prompt + schema + question
