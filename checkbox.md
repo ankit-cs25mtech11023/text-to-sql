@@ -19,7 +19,7 @@
 - [x] Verification: EWB=20 bills/23 items, GSTR-3B=63 returns (48 fy8+15 fy9), GSTR-7=12 returns/27 TDS/54 inv
 - [x] `database/descriptions_official.json` — Column descriptions for all 21 tables (3 modules + 2 common decode tables); LLM-HIDE columns omitted; schema-qualified keys
 - [x] Update `database/connection.py` — PostgreSQL engine; SQLite kept as fallback
-- [ ] Update `core/schema_extractor.py` — multi-schema support (inspect public + live_reports + common; emit schema-qualified table names)
+- [x] Update `core/schema_extractor.py` — multi-schema support; descriptions-driven table list; reserved/case-sensitive identifier quoting; skips 145-col GSTR-3B from sample rows
 - [ ] *(pending)* 4th schema from guide — TBD
 
 ## Phase 2: Core Pipeline (LLM Integration)
