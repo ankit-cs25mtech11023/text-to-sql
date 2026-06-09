@@ -18,12 +18,12 @@
 - [x] Update `.env.example` — DATABASE_URL=postgresql:///gst_official
 - [x] Verification: EWB=20 bills/23 items, GSTR-3B=63 returns (48 fy8+15 fy9), GSTR-7=12 returns/27 TDS/54 inv
 - [ ] `database/descriptions_official.json` — Column descriptions for all 3 modules
-- [ ] Update `database/connection.py` — PostgreSQL support via DATABASE_URL
+- [x] Update `database/connection.py` — PostgreSQL engine; SQLite kept as fallback
 - [ ] *(pending)* 4th schema from guide — TBD
 
 ## Phase 2: Core Pipeline (LLM Integration)
 
-- [x] `config/settings.py` — Central config with Pydantic (needs DATABASE_URL update)
+- [x] `config/settings.py` — Updated: database_url→postgresql:///gst_official, descriptions_path→descriptions_official.json
 - [ ] `config/prompts.py` — Needs rewrite for official schemas (EWB/GSTR-3B/GSTR-7 table/column context)
 - [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient with rate limiting
 - [x] `core/schema_extractor.py` — DB metadata + descriptions → context string

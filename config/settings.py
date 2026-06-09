@@ -6,8 +6,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     groq_api_key: str = ""
     openrouter_api_key: str = ""
-    database_url: str = "sqlite:///database/gst_demo.db"
-    descriptions_path: str = "database/descriptions.json"
+    database_url: str = "postgresql:///gst_official"
+    descriptions_path: str = "database/descriptions_official.json"
 
     default_provider: str = "groq"
     default_model: str = "llama-3.1-8b-instant"
