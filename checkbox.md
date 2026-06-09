@@ -14,11 +14,11 @@
 - [x] `database/Official_Schemas/ewb.sql` — EWB schema received (10 tables)
 - [x] `database/Official_Schemas/gstr3b_new.sql` — GSTR-3B schema received (1 partitioned table)
 - [x] `database/Official_Schemas/gstr7.sql` — GSTR-7 schema received (8 tables)
-- [ ] `database/seed_data_official.py` — Seed PostgreSQL with toy data (EWB + GSTR-3B + GSTR-7)
+- [x] `database/seed_data_official.py` — Seed PostgreSQL with toy data (EWB + GSTR-3B + GSTR-7)
+- [x] Update `.env.example` — DATABASE_URL=postgresql:///gst_official
+- [x] Verification: EWB=20 bills/23 items, GSTR-3B=63 returns (48 fy8+15 fy9), GSTR-7=12 returns/27 TDS/54 inv
 - [ ] `database/descriptions_official.json` — Column descriptions for all 3 modules
 - [ ] Update `database/connection.py` — PostgreSQL support via DATABASE_URL
-- [ ] Update `.env.example` — DATABASE_URL pointing to `gst_official` PostgreSQL DB
-- [ ] Verification: row counts confirmed in all 3 modules
 - [ ] *(pending)* 4th schema from guide — TBD
 
 ## Phase 2: Core Pipeline (LLM Integration)

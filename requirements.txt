@@ -2,6 +2,7 @@
 Faker==40.21.0
 SQLAlchemy==2.0.50
 greenlet==3.5.1
+psycopg2-binary==2.9.12
 
 # ── Phase 2: LLM Integration ──────────────────────────────────────────────────
 groq==1.4.0
