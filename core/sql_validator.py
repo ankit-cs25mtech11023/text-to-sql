@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 import sqlparse
 from sqlparse.sql import Statement
-from sqlparse.tokens import Keyword, DDL, DML
+from sqlparse.tokens import Keyword
 
 
 BLOCKED_KEYWORDS = {
@@ -28,17 +28,19 @@ def validate_sql(sql: str, allowed_tables: set[str] | None = None) -> Validation
 
     stmt = statements[0]
 
-    # First meaningful token must be SELECT or WITH (CTE)
-    first_keyword = _first_keyword(stmt)
-    if first_keyword not in ("SELECT", "WITH"):
+    # Statement must resolve to SELECT. get_type() sees through CTEs:
+    # 'WITH x AS (...) SELECT ...' -> 'SELECT', but 'WITH x AS (...) DELETE ...' -> 'DELETE'.
+    stmt_type = stmt.get_type()
+    if stmt_type != "SELECT":
         return ValidationResult(
             valid=False,
-            error=f"Only SELECT queries are allowed. Got: {first_keyword or 'unknown'}.",
+            error=f"Only SELECT queries are allowed. Got: {stmt_type}.",
         )
 
-    # Blocklist check across all tokens
+    # Blocklist check across all tokens (ttype in Keyword matches all subtypes:
+    # Keyword.DML, Keyword.DDL, Keyword.CTE, etc.) — defense in depth.
     for token in stmt.flatten():
-        if token.ttype in (Keyword, DDL, DML):
+        if token.ttype is not None and token.ttype in Keyword:
             val = token.normalized.upper()
             if val in BLOCKED_KEYWORDS:
                 return ValidationResult(
@@ -48,7 +50,8 @@ def validate_sql(sql: str, allowed_tables: set[str] | None = None) -> Validation
 
     if allowed_tables:
         referenced = _extract_table_names(stmt)
-        unknown = referenced - allowed_tables
+        # CTE names are defined locally in the query, not real tables — exclude them.
+        unknown = referenced - allowed_tables - _cte_names(stmt)
         if unknown:
             return ValidationResult(
                 valid=False,
@@ -58,17 +61,26 @@ def validate_sql(sql: str, allowed_tables: set[str] | None = None) -> Validation
     return ValidationResult(valid=True)
 
 
-def _first_keyword(stmt: Statement) -> str | None:
-    for token in stmt.tokens:
-        if token.ttype in (Keyword, DDL, DML):
-            return token.normalized.upper()
-        if not token.is_whitespace:
-            # Could be a grouped token — check its first real token
-            flat = list(token.flatten())
-            for t in flat:
-                if t.ttype in (Keyword, DDL, DML):
-                    return t.normalized.upper()
-    return None
+def _cte_names(stmt: Statement) -> set[str]:
+    """Names defined as CTEs: the '<name>' in 'WITH <name> AS ( ... )'. A CTE
+    definition is the only place a Name immediately precedes 'AS (' — table and
+    column aliases place the name AFTER AS."""
+    Name = sqlparse.tokens.Name
+    Punctuation = sqlparse.tokens.Punctuation
+
+    names: set[str] = set()
+    toks = [t for t in stmt.flatten() if not t.is_whitespace]
+    for i, t in enumerate(toks):
+        if t.ttype is Name and i + 2 < len(toks):
+            nxt, after = toks[i + 1], toks[i + 2]
+            if (
+                nxt.ttype is Keyword
+                and nxt.normalized.upper() == "AS"
+                and after.ttype is Punctuation
+                and after.value == "("
+            ):
+                names.add(t.value.lower())
+    return names
 
 
 def _has_multiple_statements(stmt: Statement) -> bool:
@@ -84,21 +96,49 @@ def _has_multiple_statements(stmt: Statement) -> bool:
     return False
 
 
+_JOIN_KEYWORDS = {
+    "FROM", "JOIN", "INNER JOIN", "LEFT JOIN", "RIGHT JOIN",
+    "FULL JOIN", "CROSS JOIN", "LEFT OUTER JOIN", "RIGHT OUTER JOIN",
+    "FULL OUTER JOIN",
+}
+
+
 def _extract_table_names(stmt: Statement) -> set[str]:
-    from sqlparse.sql import Identifier, IdentifierList
-    from sqlparse.tokens import Keyword
+    """Extract referenced table names, including schema-qualified dotted names
+    (e.g. 'public.tbl_x', 'live_reports.r3b_...'). After a FROM/JOIN keyword we
+    accumulate a Name (Punctuation '.' Name)* sequence into a single dotted
+    identifier, then stop at the first non-identifier token (alias, '(', etc.)."""
+    Name = sqlparse.tokens.Name
+    Punctuation = sqlparse.tokens.Punctuation
 
     tables: set[str] = set()
-    from_seen = False
+    expecting = False        # just saw FROM/JOIN — next identifier is a table
+    current: list[str] = []  # building a dotted identifier
+
+    def flush() -> None:
+        nonlocal current, expecting
+        if current:
+            tables.add("".join(current).lower())
+        current = []
+        expecting = False
 
     for token in stmt.flatten():
-        if token.ttype is Keyword and token.normalized.upper() in ("FROM", "JOIN", "INNER JOIN", "LEFT JOIN"):
-            from_seen = True
-        elif from_seen:
-            if token.ttype is sqlparse.tokens.Name:
-                tables.add(token.value.lower())
-                from_seen = False
-            elif token.ttype not in (sqlparse.tokens.Whitespace, sqlparse.tokens.Newline):
-                from_seen = False
+        if token.is_whitespace:
+            if expecting and current:
+                flush()
+            continue
+        if token.ttype is Keyword and token.normalized.upper() in _JOIN_KEYWORDS:
+            flush()
+            expecting = True
+            continue
+        if expecting:
+            if token.ttype is Name:
+                current.append(token.value)
+            elif token.ttype is Punctuation and token.value == ".":
+                current.append(".")
+            else:
+                flush()
 
+    if expecting and current:
+        flush()
     return tables

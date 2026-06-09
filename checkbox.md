@@ -34,11 +34,12 @@
 
 ## Phase 3: SQL Validation & Execution
 
-- [x] `core/sql_validator.py` — SELECT-only enforcement via sqlparse
-- [x] `core/sql_executor.py` — Run SQL, return DataFrame + metadata
+- [x] `core/sql_validator.py` — SELECT-only via sqlparse; updated for official schemas: get_type() CTE-aware SELECT check, schema-qualified table extraction, CTE-name exclusion (offline-tested: few-shot + injection/DELETE/UPDATE/CTE-hiding-DELETE/hallucinated all handled)
+- [x] `core/sql_executor.py` — Run SQL, return DataFrame + metadata (PostgreSQL-compatible, no change needed)
 - [x] `core/self_correction.py` — Error feedback loop (up to 3 attempts)
-- [x] `core/pipeline.py` — End-to-end orchestrator
-- [x] Verification: all 3 test queries passed; self-correction triggered and resolved on attempt 2
+- [x] `core/pipeline.py` — Updated: read-only PG engine, allowed_tables from SchemaExtractor (all 3 schemas, qualified + bare)
+- [x] Verification (old schema): all 3 test queries passed; self-correction resolved on attempt 2
+- [ ] Verification (official schema): end-to-end run — NEEDS Groq API call (pending, token-budgeted)
 
 ## Phase 4: Streamlit UI
 

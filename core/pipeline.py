@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import pandas as pd
-from sqlalchemy import Engine, inspect
+from sqlalchemy import Engine
 
 from config.settings import Settings
 from core.llm_client import make_client
@@ -26,12 +26,10 @@ class PipelineResult:
 class TextToSQLPipeline:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._engine: Engine = get_engine(
-            settings.database_url.replace("sqlite:///", ""), read_only=True
-        )
+        self._engine: Engine = get_engine(settings.database_url, read_only=True)
         extractor = SchemaExtractor(self._engine, settings.descriptions_path)
         ctx = extractor.get_full_context()
-        self._allowed_tables: set[str] = set(inspect(self._engine).get_table_names())
+        self._allowed_tables: set[str] = extractor.get_allowed_table_names()
 
         builder = PromptBuilder(ctx, few_shot_n=settings.few_shot_examples)
         llm = make_client(settings.default_provider, self._api_key(settings), settings.default_model)

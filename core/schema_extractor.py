@@ -45,6 +45,17 @@ class SchemaExtractor:
             return f'"{name}"'
         return name
 
+    def get_allowed_table_names(self) -> set[str]:
+        """Lowercased table names accepted by the validator. Includes both the
+        schema-qualified form (public.tbl_x) and the bare form (tbl_x) so a
+        query passes whether or not the LLM schema-qualifies — the executor is
+        the final arbiter for unqualified names not on the search_path."""
+        names: set[str] = set()
+        for qualified, _schema, table in self._tables:
+            names.add(qualified.lower())
+            names.add(table.lower())
+        return names
+
     def get_ddl(self) -> str:
         lines: list[str] = []
         for qualified, schema, table in self._tables:
