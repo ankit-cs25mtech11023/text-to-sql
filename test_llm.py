@@ -1,23 +1,13 @@
 """
-Quick interactive test for the LLM pipeline.
+Interactive test for the full pipeline (Phase 3).
 Run: python test_llm.py
 """
 from config.settings import get_settings
-from database.connection import get_engine
-from core.schema_extractor import SchemaExtractor
-from core.prompt_builder import PromptBuilder
-from core.sql_generator import SQLGenerator
-from core.llm_client import make_client
+from core.pipeline import TextToSQLPipeline
 
-s = get_settings()
-engine = get_engine("database/gst_demo.db")
-ctx = SchemaExtractor(engine, "database/descriptions.json").get_full_context()
-gen = SQLGenerator(
-    make_client(s.default_provider, s.groq_api_key, s.default_model),
-    PromptBuilder(ctx),
-)
+pipeline = TextToSQLPipeline(get_settings())
 
-print(f"Model: {s.default_model}  |  Type 'quit' to exit\n")
+print("Pipeline ready. Type 'quit' to exit.\n")
 
 while True:
     try:
@@ -26,5 +16,16 @@ while True:
         break
     if not question or question.lower() in ("quit", "q", "exit"):
         break
-    sql, _ = gen.generate(question)
-    print(f"SQL: {sql}\n")
+
+    result = pipeline.ask(question)
+
+    print(f"\nSQL:      {result.sql}")
+    print(f"Attempts: {result.attempts}  |  Time: {result.execution_time_ms}ms")
+
+    if result.success:
+        print(f"Rows:     {result.row_count if hasattr(result, 'row_count') else len(result.data)}")
+        print(result.data.to_string(index=False))
+    else:
+        print(f"ERROR:    {result.error}")
+
+    print()

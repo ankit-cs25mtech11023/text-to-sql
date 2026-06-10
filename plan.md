@@ -19,9 +19,9 @@ Dev/
 │   ├── settings.py                  # Central config (model, DB URL, limits)
 │   └── prompts.py                   # All prompt templates
 ├── database/
-│   ├── schema.sql                   # DDL for GST tables (SQLite)
-│   ├── seed_data.py                 # Generate synthetic GST data via Faker
-│   ├── descriptions.json            # Column-level descriptions for LLM context
+│   ├── Official_Schemas/            # Official govt PostgreSQL DDL (EWB, GSTR-3B, GSTR-7)
+│   ├── seed_data_official.py        # Seeds PostgreSQL with toy data for all modules
+│   ├── descriptions_official.json   # Column-level descriptions for LLM context
 │   └── connection.py                # SQLAlchemy engine factory
 ├── core/
 │   ├── schema_extractor.py          # Reads DB metadata + descriptions.json → context string
@@ -157,11 +157,11 @@ psql gst_official -c "SELECT COUNT(*) FROM live_reports.r3b_comphrehensive_list_
 psql gst_official -c "SELECT COUNT(*) FROM public.tbl_gst_rtn_r7;"  -- expect ~12
 ```
 
-### Legacy Files (superseded)
-The following files from the original toy schema are superseded but kept for reference:
-- `database/schema.sql` — original 7-table SQLite schema (not used)
-- `database/seed_data.py` — SQLite seed data (not used)
-- `database/descriptions.json` — descriptions for old schema (not used)
+### Legacy Files (removed)
+The original toy-schema files (`database/schema.sql`, `database/seed_data.py`,
+`database/descriptions.json`, `database/gst_demo.db`) have been removed from the
+working tree, superseded by the PostgreSQL official schemas. They remain
+recoverable via git history if ever needed.
 
 ---
 
@@ -808,7 +808,7 @@ psycopg2-binary>=2.9
 - COMMON JOIN PATTERNS stays hardcoded — it is domain knowledge (Part-A ↔ Part-B bridge via ewb_no, GSTR-7 FK naming quirk, etc.) not derivable from schema metadata alone
 
 ### Schema Pivot (Phase 1 redo)
-The original 7-table SQLite toy schema (`database/schema.sql`) is superseded by the official government schemas. Files kept for reference but not used by the pipeline. The pipeline itself (Phases 2–4 code) is database-agnostic — only `database/connection.py`, `config/settings.py`, `config/prompts.py`, and `database/descriptions_official.json` need updating for the new schemas.
+The original 7-table SQLite toy schema (`database/schema.sql`) is superseded by the official government schemas and has been removed from the working tree (recoverable via git history). The pipeline itself (Phases 2–4 code) is database-agnostic — only `database/connection.py`, `config/settings.py`, `config/prompts.py`, and `database/descriptions_official.json` need updating for the new schemas.
 
 ---
 

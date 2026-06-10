@@ -2,12 +2,11 @@
 
 ## Phase 1 (original — superseded): SQLite Toy Schema
 
-> Replaced by official government schemas. Files kept for reference.
+> Replaced by official government schemas. Legacy SQLite files
+> (`schema.sql`, `seed_data.py`, `descriptions.json`, `gst_demo.db`) have been
+> removed from the working tree — recoverable via git history.
 
-- [x] `database/schema.sql` — 7-table SQLite schema (legacy, not used)
-- [x] `database/seed_data.py` — SQLite synthetic data (legacy, not used)
-- [x] `database/descriptions.json` — descriptions for old schema (legacy, not used)
-- [x] `database/connection.py` — SQLAlchemy engine factory (needs PostgreSQL update)
+- [x] `database/connection.py` — SQLAlchemy engine factory (PostgreSQL; SQLite fallback retained)
 
 ## Phase 1 (redo): Official Government Schemas + PostgreSQL
 
