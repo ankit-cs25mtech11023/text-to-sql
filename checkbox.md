@@ -25,11 +25,12 @@
 
 - [x] `config/settings.py` — Updated: database_url→postgresql:///gst_official, descriptions_path→descriptions_official.json
 - [x] `config/prompts.py` — Rewritten for official schemas: PostgreSQL dialect, 3-module map, join paths, quoting/date/padding conventions, 5 few-shot examples (all verified to execute)
-- [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient with rate limiting
+- [x] `core/llm_client.py` — Abstract base + GroqClient + OpenRouterClient (provider rate limiter removed — vLLM/free tiers don't need it)
 - [x] `core/schema_extractor.py` — DB metadata + descriptions → context string
 - [x] `core/prompt_builder.py` — Assembles system prompt + schema + question
 - [x] `core/sql_generator.py` — Question → prompt → LLM → extract SQL
-- [ ] Verification: re-test with official schema queries once seed data + descriptions ready
+- [ ] Add vLLM/OpenAI client to `llm_client.py` + `make_client` (point at tunneled `http://localhost:8765/v1`)
+- [ ] Verification: end-to-end SQL generation on official schemas via local vLLM
 
 ## Phase 3: SQL Validation & Execution
 
@@ -38,7 +39,16 @@
 - [x] `core/self_correction.py` — Error feedback loop (up to 3 attempts)
 - [x] `core/pipeline.py` — Updated: read-only PG engine, allowed_tables from SchemaExtractor (all 3 schemas, qualified + bare)
 - [x] Verification (old schema): all 3 test queries passed; self-correction resolved on attempt 2
-- [ ] Verification (official schema): end-to-end run — NEEDS Groq API call (pending, token-budgeted)
+- [ ] Verification (official schema): end-to-end run via local vLLM (endpoint now live — see Phase 5-B/Infra)
+
+## Infrastructure: Local vLLM Inference (HPC)
+
+- [x] Conda env `text2sql` on lab HPC (SLURM); vLLM cu129 wheel + cu129 torch (CUDA 12.9 driver match)
+- [x] Model `XGenerationLab/XiYanSQL-QwenCoder-7B-2504` downloaded to HPC HF cache (removed duplicate 2502 copies)
+- [x] `vllm serve` runs — root-caused OOM to SLURM `--mem`→`ulimit -v` + CUDA UVA; fix = `--mem=128G`
+- [x] Endpoint smoke-tested (`/v1/models`, `/v1/chat/completions` → valid SQL)
+- [x] SSH tunnel `localhost:8765` → `slurm-comp01:8765` verified from laptop
+- [ ] Pipeline pointed at the endpoint (blocked on `llm_client.py` vLLM client — see Phase 2)
 
 ## Phase 4: Streamlit UI
 
@@ -63,7 +73,7 @@
 - [ ] `index/` — FAISS index files (gitignored, built by schema_indexer.py)
 - [ ] Update `core/prompt_builder.py` — add `RAGPromptBuilder` subclass
 - [ ] Update `core/pipeline.py` — add `RAGTextToSQLPipeline` subclass
-- [ ] Update `core/llm_client.py` — add `VLLMClient` for local vLLM inference
+- [~] Update `core/llm_client.py` — add vLLM/OpenAI client (pulled forward to Phase 2 — endpoint already live)
 - [ ] RAG ablation experiments (Schema RAG only / Few-shot RAG only / Both / Top-K sweep)
 - [ ] Verification: RAG pipeline retrieves correct tables for test questions
 

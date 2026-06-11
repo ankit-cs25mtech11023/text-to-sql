@@ -4,7 +4,9 @@
 
 Thesis project: build a Text-to-SQL pipeline that converts natural language questions about GST (Goods and Services Tax) transaction data into SQL, executes it, and shows results. The advisor's pipeline is: **NLP input → LLM (+ schema/datatypes/descriptions) → SQL command → Execute → Show results**.
 
-**Key constraints:** open-source LLM ≤10B params (future GPU can only handle this size), Groq API (no local GPU yet), SQLite for demo, Streamlit frontend. Fraud detection on the whiteboard is a different student's thesis — not in our scope. One larger model (70B) included only as upper-bound baseline for thesis comparison — not a deployment candidate.
+**Key constraints:** open-source LLM ≤10B params (future GPU can only handle this size), PostgreSQL (official govt schemas), Streamlit frontend. Fraud detection on the whiteboard is a different student's thesis — not in our scope. One larger model (70B) included only as upper-bound baseline for thesis comparison — not a deployment candidate.
+
+**Inference path (current):** Local vLLM serving `XGenerationLab/XiYanSQL-QwenCoder-7B-2504` on the lab HPC (SLURM GPU node) is now the **primary** inference path — the ~26.5K-token static schema prompt exceeds free API tiers (Groq 6K TPM). Groq/OpenRouter free tiers remain as comparison baselines. This pulls the local-GPU work forward from Phase 6; see the HPC serving recipe in `CLAUDE.md`.
 
 ---
 
@@ -52,7 +54,7 @@ Dev/
 
 **Goal:** Create a PostgreSQL database using the official government GST schemas provided by the guide, and seed it with realistic toy data for development and testing.
 
-**Status:** In progress — schemas received, seed data being written.
+**Status:** ✅ Complete (3 of 4 modules) — schemas seeded, descriptions written, `SchemaExtractor` made multi-schema. 4th module pending from guide.
 
 ### Official Schemas (provided by guide)
 
@@ -198,9 +200,9 @@ Spread evaluation load across both providers to work around daily limits.
 Deployment candidates (must be ≤10B — future GPU can only handle this):
 | Model | Params | Provider | Notes |
 |-------|--------|----------|-------|
-| `llama-3.1-8b-instant` | 8B | Groq | Primary candidate — API available now |
-| `qwen/qwen3-coder:free` | ~8B | OpenRouter | Best free coding model |
-| `XiYanSQL-QwenCoder-7B` | 7B | Local (vLLM) | Specialized SQL fine-tune, SOTA on BIRD (69%). Phase 5-B / Phase 6 only — no API available |
+| `XiYanSQL-QwenCoder-7B-2504` | 7B | Local vLLM (HPC) | **Primary — now serving.** Specialized SQL fine-tune (SQLite/PostgreSQL/MySQL), SOTA-class on BIRD |
+| `llama-3.1-8b-instant` | 8B | Groq | Free-tier baseline (capped at 6K TPM — too small for full prompt) |
+| `qwen/qwen3-coder:free` | ~8B | OpenRouter | Free coding-model baseline |
 
 Upper-bound baseline (thesis comparison only — NOT for deployment):
 | Model | Params | Provider | Notes |
@@ -230,14 +232,13 @@ Prompt template structure:
 SYSTEM: You are a SQL expert for Indian GST databases.
 Given a natural language question, generate a single valid SQL query.
 
-Rules:
+Rules (see `config/prompts.py` for the live, authoritative copy):
 - Output ONLY the SQL query, no explanations
-- Use only SELECT statements
+- Use only SELECT statements; standard PostgreSQL dialect
+- Schema-qualify every table (e.g. `public.tbl_ewb_parta_ewb`, `live_reports.r3b_...`)
 - For intra-state: use CGST + SGST. For inter-state: use IGST
-- return_period is MMYYYY format (e.g., '032026' for March 2026)
-- "total tax" = cgst_amount + sgst_amount + igst_amount + cess_amount
+- Honour the official-schema conventions: VARCHAR dates need `TO_DATE()`, padded strings need `TRIM()`/`LIKE`, reserved/case-sensitive identifiers (`"range"`, `"current_date"`, `"InvVal"`, `"QtyUqc"`) must be double-quoted, and partitioned GSTR-3B scans must include `fy_flag = N`
 - Qualify ambiguous columns with table aliases
-- Use standard SQL compatible with SQLite
 
 DATABASE SCHEMA:
 {ddl_statements}
@@ -283,8 +284,8 @@ class SQLGenerator:
 ### Verification
 ```python
 from core.sql_generator import SQLGenerator
-sql = generator.generate("How many invoices are there?")
-print(sql)  # Should output: SELECT COUNT(*) FROM invoices
+sql = generator.generate("How many e-way bills are there?")
+print(sql)  # e.g. SELECT COUNT(*) FROM public.tbl_ewb_parta_ewb
 ```
 
 ---
@@ -314,7 +315,7 @@ class SQLExecutor:
 
 - Auto-append `LIMIT 500` if no LIMIT present
 - Query timeout: 30s
-- SQLite opened in read-only mode (`?mode=ro`)
+- PostgreSQL engine opened read-only (`default_transaction_read_only=on`)
 
 ### 3C. Self-Correction (`core/self_correction.py`)
 
@@ -600,26 +601,13 @@ The original `TextToSQLPipeline` on `main` is untouched — `RAGPipeline` is a d
 
 ---
 
-### 5B-6. XiYanSQL-QwenCoder-7B (When GPU Available)
+### 5B-6. XiYanSQL-QwenCoder-7B — ✅ now serving (pulled forward to primary)
 
-This is the specialized Text-to-SQL model recommended by the guide. Available on HuggingFace: `XGenerationLab/XiYanSQL-QwenCoder-7B-2502`.
+The specialized Text-to-SQL model recommended by the guide, `XGenerationLab/XiYanSQL-QwenCoder-7B-2504`, is **already serving** via local vLLM on the lab HPC (no longer gated on Phase 5-B/6). Full serving recipe lives in `CLAUDE.md` → "HPC / vLLM serving". Used now as the primary inference path, not just an RAG experiment.
 
-- **BIRD benchmark**: 69.03% execution accuracy (SOTA for single fine-tuned model ≤7B)
-- **Dialects**: SQLite, PostgreSQL, MySQL — all supported
-- **Inference**: vLLM with bfloat16, requires ~10GB VRAM
-- **Prompt format**: XiYanSQL uses its own prompt template (Chinese-language prompt shown in guide — adapt to English for GST use case)
-
-Add `VLLMClient` to `core/llm_client.py` (OpenAI-compatible endpoint via vLLM server):
-```python
-class VLLMClient(LLMClient):
-    def __init__(self, base_url: str, model: str)  # points to local vLLM server
-```
-
-**Run when GPU is available:**
-```bash
-vllm serve XGenerationLab/XiYanSQL-QwenCoder-7B-2502 \
-  --dtype bfloat16 --gpu-memory-utilization 0.85
-```
+- **Dialects**: SQLite, PostgreSQL, MySQL — all supported (matches our `gst_official` PG DB)
+- **Inference**: vLLM, OpenAI-compatible endpoint on port 8765, `--enforce-eager`, `--max-model-len 32768`
+- **Client**: add a vLLM/OpenAI client to `core/llm_client.py` + `make_client` (OpenRouterClient is already an OpenAI wrapper — generalize it with a `base_url`)
 
 ---
 
@@ -688,9 +676,9 @@ print('Shots:', [s['question'] for s in shots])
 
 **When:** After thesis demo is validated and green light is received.
 
-### 6A. Database Migration
-- Switch SQLite → PostgreSQL
-- Create read-only role for the pipeline
+### 6A. Database Hardening
+- PostgreSQL already in use (`gst_official`) — migration done in Phase 1 redo
+- Create a dedicated read-only role for the pipeline (currently uses `default_transaction_read_only`)
 - Connection pooling via SQLAlchemy pool_size or PgBouncer
 
 ### 6B. API Backend
@@ -698,11 +686,9 @@ print('Shots:', [s['question'] for s in shots])
 - `POST /query` → `{question, model}` → `{sql, data, row_count, execution_time}`
 - Govt website calls this via REST/AJAX
 
-### 6C. Local GPU (When Available)
-- `VLLMClient` already added in Phase 5-B branch — merge into main
-- Primary model: `XiYanSQL-QwenCoder-7B` (`XGenerationLab/XiYanSQL-QwenCoder-7B-2502`) — specialized Text-to-SQL, SOTA on BIRD (69% EX), supports SQLite/PostgreSQL/MySQL
-- Serve via vLLM: `vllm serve XGenerationLab/XiYanSQL-QwenCoder-7B-2502 --dtype bfloat16`
-- Change config: `llm_backend = "vllm"`, `default_model = "XiYanSQL-QwenCoder-7B"`
+### 6C. Local GPU — ✅ already serving (HPC)
+- vLLM serving of `XiYanSQL-QwenCoder-7B-2504` is already working on the lab HPC (recipe in `CLAUDE.md`)
+- Remaining for production: a permanent/owned GPU box (vs. the shared SLURM node), and config `default_provider = "vllm"`, `default_model = "xiyansql"`
 
 ### 6D. Security
 - Audit logging: log every query (question, SQL, result count, user ID)
@@ -725,15 +711,17 @@ print('Shots:', [s['question'] for s in shots])
 
 | Week | Phase | Milestone | Branch |
 |------|-------|-----------|--------|
-| 1 | Phase 1 (original) ✅ | SQLite toy schema + seed data — superseded | `main` |
-| 2 | Phase 2 ✅ | LLM generates SQL from natural language via Groq | `main` |
-| 3 | Phase 3 ✅ | Full pipeline: question → validated SQL → results | `main` |
-| 4 | Phase 4 ✅ | Streamlit demo built | `main` |
-| Now | Phase 1 (redo) 🔄 | Official schemas (EWB, GSTR-3B, GSTR-7) + PostgreSQL toy data | `main` |
-| Next | Phase 1 (redo) | 4th schema + update prompts/descriptions for new tables | `main` |
+| 1 | Phase 1 (original) `[DONE]` | SQLite toy schema + seed data — superseded | `main` |
+| 2 | Phase 2 `[DONE]` | LLM generates SQL from natural language | `main` |
+| 3 | Phase 3 `[DONE]` | Full pipeline: question → validated SQL → results | `main` |
+| 4 | Phase 4 `[DONE]` | Streamlit demo built | `main` |
+| 5 | Phase 1 (redo) `[DONE]` | Official schemas (EWB, GSTR-3B, GSTR-7) seeded + descriptions + multi-schema extractor | `main` |
+| 6 | Infra `[DONE]` | Local vLLM serving XiYanSQL-7B-2504 on HPC, endpoint smoke-tested | `main` |
+| **Now** | Infra → Phase 2 🔄 | Wire vLLM client into pipeline + verify end-to-end SQL on official schemas | `main` |
+| Next | Phase 1 (redo) | 4th schema from guide | `main` |
 | TBD | Phase 5 | Gold Q-SQL pairs for official schemas + baseline evaluation | `main` |
 | TBD | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation | `rag-enhancement` |
-| TBD | Ablations | All deferred ablation studies — resume when API constraints lift | `main` / `rag-enhancement` |
+| TBD | Ablations | All deferred ablation studies | `main` / `rag-enhancement` |
 | TBD | Phase 6 | FastAPI + security hardening (when green light) | `main` (merge) |
 
 ---
@@ -787,7 +775,7 @@ psycopg2-binary>=2.9
 | Official schemas too large for prompt | 19+ tables with dense column comments. RAG (Phase 5-B) is the natural fix — retrieve only relevant tables per query. Static prompt approach requires careful column pruning (use LLM-HIDE annotations). |
 | Schema complexity: padded strings, quoted columns, VARCHAR dates | Document in descriptions_official.json as explicit LLM instructions (TRIM, TO_DATE, double-quote). Test with representative queries. |
 | 4th schema not yet received | Build pipeline to be modular — add new schema/descriptions without touching core pipeline |
-| No GPU when thesis is due | Groq is primary path. XiYanSQL + vLLM is Phase 5-B/6 — thesis passes without it |
+| Shared HPC GPU contention / time limits | Lab SLURM node is shared; jobs have `--time` caps and CPUs/GPUs get fully allocated. Mitigation: `tmux` + re-allocate when free, never cancel others' jobs, Groq/OpenRouter free tiers as fallback |
 | SQL injection in govt deployment | Validator blocks non-SELECT + DB has read-only role. Defense in depth |
 | FAISS retrieval fetches wrong tables | 19+ tables makes this more likely than before. Mitigation: always include core tables (tbl_ewb_parta_ewb, r3b_*, tbl_gst_rtn_r7) regardless of retrieval |
 | RAG branch diverges too far from main | Keep `RAGPipeline` as a subclass — base pipeline on main is untouched. Merge is clean. |
