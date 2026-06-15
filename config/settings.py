@@ -22,12 +22,6 @@ class Settings(BaseSettings):
 
     few_shot_examples: int = 0  # 0 = zero-shot; set to 3 or 5 for ablation
 
-    # Locally served models (add more specialised SQL models here as they are
-    # downloaded to the HPC and served via vLLM).
-    vllm_models: list[str] = [
-        "xiyansql",
-    ]
-
     @field_validator("default_provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:

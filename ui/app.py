@@ -21,11 +21,6 @@ EXAMPLE_QUESTIONS = [
     "Compare CGST vs IGST collection across all months",
 ]
 
-MODEL_OPTIONS: dict[str, tuple[str, str]] = {
-    "XiYanSQL-QwenCoder-7B (local vLLM)": ("vllm", "xiyansql"),
-}
-
-
 @st.cache_resource
 def load_pipeline(provider: str, model: str) -> TextToSQLPipeline:
     settings = Settings(default_provider=provider, default_model=model)

@@ -9,6 +9,32 @@ Rules:
 - Qualify columns with table aliases to avoid ambiguity
 - LIMIT results to 100 rows unless the question asks for all or a specific count
 
+═══════════════════════════════════════════════════════════════════════════
+HOW TO BUILD THE QUERY — reason through these steps before writing SQL:
+═══════════════════════════════════════════════════════════════════════════
+1. PICK THE MODULE by the return/document the question is about, and use ONLY
+   that module's tables. EWB, GSTR-3B and GSTR-7 are SEPARATE returns — never
+   answer a question about one using another module's tables. If the question
+   names a form ("GSTR-7", "GSTR-3B", "e-way bill"), that alone fixes the module.
+2. ANCHOR ON THE MODULE'S MAIN TABLE (listed per module below) at its known
+   grain. "How many <returns/bills>" = COUNT(*) on that main table; "how many
+   distinct <taxpayers/deductors>" = COUNT(DISTINCT <key column>).
+3. AGGREGATE WHEN ROWS ARE FINER THAN THE QUESTION'S UNIT. If a table holds
+   many rows per entity (one GSTR-3B row per gstin PER ret_period → many rows
+   per taxpayer per year; many item lines per bill; many TDS lines per return),
+   use SUM(...) + GROUP BY the entity. NEVER treat one row as an entity's total
+   or ranking value — a per-taxpayer/per-FY total ALWAYS needs SUM + GROUP BY.
+4. LIFECYCLE STATUS IS ON THE MAIN TABLE, NOT THE EVENT LOGS. For EWB
+   cancelled/expired/active, filter tbl_ewb_parta_ewb.status. The Part-B *det
+   tables (canceldet/extenddet/...) are EVENT logs — use them for event detail;
+   to count affected bills use COUNT(DISTINCT the bill), not COUNT(*) of events.
+5. SUM THE COLUMN THE METRIC ACTUALLY MEANS, not one whose name merely matches the
+   question wording — see GST DOMAIN RULES for the exact tax/amount columns.
+6. BEWARE NAME-TRAPS: a table/column whose NAME echoes a question word is often
+   the WRONG one. "cancelled" pulls toward the canceldet EVENT log, but the count
+   of cancelled bills is tbl_ewb_parta_ewb.status='CNL'. "deducted" pulls toward
+   amt_ded, but the TDS is iamt+camt+samt. Match on MEANING and grain, not name.
+
 IDENTIFIER QUOTING (these columns MUST be double-quoted exactly, else the query fails):
 - EWB: "InvVal", "QtyUqc"
 - GSTR-3B: "range", "current_date"
@@ -34,8 +60,11 @@ MODULE 1 — EWB (E-Way Bill: statutory document for goods movement). Schema: pu
   Two trees linked logically by EWB number (ewbno = ewb_no):
     Part-A (the bill itself):
       public.tbl_ewb_parta            : batch parent (state/period)
-      public.tbl_ewb_parta_ewb        : MAIN — one row per e-way bill. ONLY table with
-                                        frgstin/togstin/ewbno/assval/igstval/status/travdist
+      public.tbl_ewb_parta_ewb        : MAIN — one row per e-way bill (COUNT(*) = number of
+                                        bills). ONLY table with frgstin/togstin/ewbno/assval/
+                                        igstval/travdist AND the lifecycle `status`
+                                        (ACT/CNL/EXP) — filter status here for cancelled/
+                                        expired/active bills; the Part-B *det tables are events.
       public.tbl_ewb_parta_ewb_itemlist : item lines (hsncod, rates, assamt) → FK idtbl_ewb_parta_ewb
     Part-B (events on the bill):
       public.tbl_ewb_partb_ewb        : MAIN Part-B — one row per event packet (ewb_no)
@@ -44,8 +73,12 @@ MODULE 1 — EWB (E-Way Bill: statutory document for goods movement). Schema: pu
 
 MODULE 2 — GSTR-3B (Monthly Summary Return). Schema: live_reports.
   live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned : SINGLE denormalized flat table.
-    - One row per (gstin, ret_period). NEVER self-join or join to any base table — every
-      field (geo, taxpayer master, supplies, ITC, payments, RCM, ECO, state_income) is on ONE row.
+    - One row per (gstin, ret_period) = one filed monthly return. NEVER self-join or join to any
+      base table — every field (geo, taxpayer master, supplies, ITC, payments, RCM, ECO,
+      state_income) is on ONE row.
+    - GRAIN WARNING: a taxpayer files ONE row PER ret_period → MANY rows per financial year. For
+      per-taxpayer or per-FY totals/rankings, SUM(<col>) GROUP BY gstin (a single row is one
+      MONTH, never the taxpayer's yearly total). "Top taxpayers by X" = SUM(X) GROUP BY gstin.
     - PARTITIONED by fy_flag. ALWAYS add `fy_flag = N` in WHERE when a financial year is named
       (8 = FY2024-25, 9 = FY2025-26). This prunes the partition scan.
     - COUNT taxpayers → COUNT(DISTINCT gstin). COUNT returns filed → COUNT(*).
@@ -55,8 +88,14 @@ MODULE 2 — GSTR-3B (Monthly Summary Return). Schema: live_reports.
     - state_income is a pre-computed KPI — use it directly when asked "state income / SGST revenue".
 
 MODULE 3 — GSTR-7 (TDS Return: tax deducted at source). Schema: public.
-  public.tbl_gst_rtn_r7                : MAIN — gstin (the DEDUCTOR/filer) + fp (period)
-  public.tbl_gst_rtn_r7_tds            : deductee-wise TDS (gstin_ded = DEDUCTEE, amt_ded, iamt/camt/samt)
+  This is the TDS return — a DIFFERENT form from GSTR-3B. Answer GSTR-7 / TDS /
+  deductor / deductee questions ONLY from these public.tbl_gst_rtn_r7* tables,
+  NEVER from the GSTR-3B table.
+  public.tbl_gst_rtn_r7                : MAIN — one row per filed GSTR-7 return, keyed
+                                         (gstin = DEDUCTOR/filer, fp = period). COUNT(*) = returns
+                                         filed; COUNT(DISTINCT gstin) = distinct deductors.
+  public.tbl_gst_rtn_r7_tds            : deductee-wise TDS (gstin_ded = DEDUCTEE; amt_ded = pre-TDS
+                                         BASE amount; iamt/camt/samt = the TDS actually withheld)
   public.tbl_gst_rtn_r7_tds_inv        : invoice-level TDS → FK idtbl_gst_rtn_r7_tds
   public.tbl_gst_rtn_r7_tdsa(_inv)     : amendments (original o* + revised values)
   public.tbl_gst_rtn_r7_tax_pay        : declared liability
@@ -77,8 +116,10 @@ GST DOMAIN RULES:
 - Intra-state movement (frstat = tostat in EWB; intra in GSTR): tax splits into CGST + SGST (IGST = 0)
 - Inter-state movement (frstat <> tostat): only IGST is non-zero (CGST = SGST = 0)
 - EWB "total tax" = cgstval + sgstval + igstval + cessval
-- GSTR-7 "TDS withheld" = iamt + camt + samt (per row)
-- EWB status: 'ACT' = active, 'CNL' = cancelled, 'EXP' = expired
+- GSTR-7 "TDS deducted / withheld / collected" = SUM(iamt + camt + samt). amt_ded is the gross
+  pre-TDS payment the TDS was computed ON (the base) — NEVER SUM(amt_ded) for a TDS-amount question.
+- EWB status: 'ACT' = active, 'CNL' = cancelled, 'EXP' = expired. "Cancelled e-way bills" =
+  COUNT bills WHERE status='CNL' (the bill's state), not rows in the canceldet event log.
 
 DATABASE SCHEMA:
 {ddl}

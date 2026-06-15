@@ -38,7 +38,7 @@
       "igstval": "Total IGST on the EWB. NONZERO for inter-state movements (frstat <> tostat).",
       "cessval": "Total advalorem cess on the EWB. Often 0.",
       "otherval": "Other value (rounding/misc). Often 0.",
-      "status": "Current EWB status. 'ACT'=Active, 'CNL'=Cancelled, 'EXP'=Expired.",
+      "status": "Current EWB status. 'ACT'=Active, 'CNL'=Cancelled, 'EXP'=Expired. CANONICAL bill state: for 'how many e-way bills were cancelled/expired/active' COUNT bills in THIS table WHERE status='CNL'/'EXP'/'ACT' — do NOT use the Part-B canceldet event log for that count.",
       "rejstatus": "Rejection status flag. Empty/blank when not rejected; non-empty when consignee has rejected the EWB.",
       "travdist": "Travel distance declared in km, stored as STRING. E.g. '232'. Cast to integer for numeric comparison.",
       "InvVal": "Invoice value (gross, including tax). CASE-SENSITIVE column name — MUST be referenced with double quotes (\"InvVal\"), else PostgreSQL folds to lowercase and the column is not found.",
@@ -105,7 +105,7 @@
     }
   },
   "public.tbl_ewb_partb_ewb_canceldet": {
-    "table_description": "EWB cancellation events. Holds when, why, and by whom an EWB was cancelled. JOIN via idtbl_ewb_partb_ewb to tbl_ewb_partb_ewb. Corresponds to bills with status='CNL' in Part-A.",
+    "table_description": "EWB cancellation EVENT log (when/why/by whom an EWB was cancelled). TRAP: for 'how many e-way bills were cancelled' do NOT count rows here — that is the bill's state: COUNT bills in tbl_ewb_parta_ewb WHERE status='CNL' (not every cancelled bill has an event row here). Use THIS table only for cancellation details (reason/time/actor). JOIN via idtbl_ewb_partb_ewb to tbl_ewb_partb_ewb.",
     "columns": {
       "idtbl_ewb_partb_ewb_canceldet": "Primary key.",
       "ewb_no": "Cancelled EWB number (denormalized). FREQUENTLY BLANK — JOIN through idtbl_ewb_partb_ewb to get it from tbl_ewb_partb_ewb.ewb_no.",
@@ -117,7 +117,7 @@
     }
   },
   "public.tbl_ewb_partb_ewb_extenddet": {
-    "table_description": "EWB validity-extension events. Captures legitimate delays where the transporter/taxpayer extended the valid-till date. JOIN via idtbl_ewb_partb_ewb to tbl_ewb_partb_ewb.",
+    "table_description": "EWB validity-extension EVENT log (one row per extension; a bill can be extended more than once). For 'how many e-way bills had validity extended' count DISTINCT bills (COUNT(DISTINCT the bill via the Part-B join), not COUNT(*) of event rows). JOIN via idtbl_ewb_partb_ewb to tbl_ewb_partb_ewb.",
     "columns": {
       "idtbl_ewb_partb_ewb_extenddet": "Primary key.",
       "extdt": "Extension request timestamp, VARCHAR 'DD/MM/YYYY HH:MM:SS AM/PM'.",
@@ -328,14 +328,14 @@
     }
   },
   "public.tbl_gst_rtn_r7_tds": {
-    "table_description": "GSTR-7 TDS data: one row per DEDUCTEE per return. amt_ded = gross amount paid to the deductee on which TDS was deducted; the iamt/camt/samt split is the tax withheld. JOIN to main via the FK column `tbl_gst_rtn_r7` (note: no `id` prefix) to reach deductor gstin and period. Filter on gstin_ded for 'TDS deducted FROM supplier X'.",
+    "table_description": "GSTR-7 TDS data: one row per DEDUCTEE per return. The TDS amount withheld = iamt+camt+samt; amt_ded is ONLY the gross pre-TDS payment base, NOT the TDS itself (never SUM amt_ded for a TDS-amount question). JOIN to main via the FK column `tbl_gst_rtn_r7` (note: no `id` prefix) to reach deductor gstin and period. Filter on gstin_ded for 'TDS deducted FROM supplier X'.",
     "columns": {
       "idtbl_gst_rtn_r7_tds": "Primary key.",
       "gstin_ded": "15-char DEDUCTEE GSTIN — the supplier whose payment was subject to TDS. Do NOT confuse with the deductor's gstin in the main table.",
-      "amt_ded": "Amount paid to deductee on which tax was deducted (gross, pre-TDS).",
-      "iamt": "IGST withheld (inter-state).",
-      "camt": "CGST withheld (intra-state).",
-      "samt": "SGST withheld (intra-state).",
+      "amt_ded": "TRAP: this is the BASE amount only — the gross payment on which TDS was computed (pre-TDS) — NOT the TDS. Despite the name 'amt_ded' (amount deducted), do NOT SUM it for 'TDS deducted/withheld/collected'; the TDS amount is iamt+camt+samt.",
+      "iamt": "IGST TDS withheld. The reportable TDS amount = iamt+camt+samt (SUM these for 'total TDS deducted'), NOT amt_ded.",
+      "camt": "CGST TDS withheld. Part of the TDS amount = iamt+camt+samt (not amt_ded).",
+      "samt": "SGST TDS withheld. Part of the TDS amount = iamt+camt+samt (not amt_ded).",
       "tbl_gst_rtn_r7": "FK to main table tbl_gst_rtn_r7.idtbl_gst_rtn_r7. NOTE: the FK column is named `tbl_gst_rtn_r7` (no `id` prefix) — source-DB quirk. Use this exact name in JOIN ON clauses.",
       "inserted_date": "Row ingestion timestamp (TIMESTAMPTZ).",
       "deductee_name": "Trade name of the deductee (often blank on older rows).",

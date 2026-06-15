@@ -703,7 +703,8 @@ print('Shots:', [s['question'] for s in shots])
 | 6 | Infra `[DONE]` | Local vLLM serving XiYanSQL-7B-2504 on HPC, endpoint smoke-tested | `main` |
 | 7 | Phase 2 `[DONE]` | vLLM client wired into pipeline; hosted APIs (Groq/OpenRouter) dropped — local-only inference | `main` |
 | 7 | Phase 2/3 verify `[DONE]` | End-to-end run on `gst_official` via tunneled vLLM PASSED (2026-06-15); EWB queries correct; found GSTR-7↔GSTR-3B module confusion | `main` |
-| **Now** | Phase 2 prompt tuning 🔄 | Strengthen GSTR-7 vs GSTR-3B disambiguation in `config/prompts.py`; then Phase 5 gold pairs + baseline eval | `main` |
+| 7 | Phase 2 prompt-hardening `[DONE]` | Diagnostic-driven general prompt+description fixes (routing, aggregation grain, amount-column semantics); EX 11/16→15/16 on 16-Q probe; residual name-collision documents RAG/few-shot motivation | `main` |
+| **Now** | Phase 5 🔄 | Build gold Q-SQL pairs (seed from the 16-Q probe) + run baseline evaluation on XiYanSQL-7B | `main` |
 | Next | Phase 1 (redo) | 4th schema from guide | `main` |
 | TBD | Phase 5 | Gold Q-SQL pairs for official schemas + baseline evaluation | `main` |
 | TBD | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation | `rag-enhancement` |
@@ -778,6 +779,11 @@ psycopg2-binary>=2.9
 - Move TABLE RESPONSIBILITIES and COLUMN OWNERSHIP into `descriptions_official.json`
 - Auto-generate FOREIGN KEY RELATIONSHIPS inside `SchemaExtractor` — SQLAlchemy `inspect().get_foreign_keys()` reads this directly
 - COMMON JOIN PATTERNS stays hardcoded — it is domain knowledge (Part-A ↔ Part-B bridge via ewb_no, GSTR-7 FK naming quirk, etc.) not derivable from schema metadata alone
+
+### Static-Prompt Ceiling: Lexical Name-Collisions (finding, 2026-06-15)
+A diagnostic-driven prompt-hardening pass (16-Q probe, all 3 modules) lifted execution accuracy from 11/16 to 15/16. General, schema-grounded fixes — a "how to build the query" reasoning playbook, symmetric MAIN-table grain statements, and **point-of-selection** description fixes (warn the wrong column/table, make the correct one self-advertise) — reliably fixed **module mis-routing**, **aggregation-grain** (one row ≠ one entity ⇒ SUM+GROUP BY), and **amount-column semantics** (TDS = `iamt+camt+samt`, not `amt_ded`), and these generalised across phrasings.
+
+The residual failure is a **near-exact name-collision**: "how many e-way bills *were cancelled*" routes to the `canceldet` event log (count 2) instead of `tbl_ewb_parta_ewb.status='CNL'` (count 4). It is **phrasing-sensitive** — "how many *cancelled e-way bills*" routes correctly — and resisted five layers of prose guidance. This is the empirical ceiling of static prompting and a concrete motivation for Phase 5-B: semantic schema retrieval (RAG) and few-shot demonstration are the mechanisms expected to stabilise table selection where surface-name matching misleads. The 16-Q probe (`/tmp/t2s_diag.py`) is a good seed for the Phase 5 gold set.
 
 ### Schema Pivot (Phase 1 redo)
 The original 7-table SQLite toy schema (`database/schema.sql`) is superseded by the official government schemas and has been removed from the working tree (recoverable via git history). The pipeline itself (Phases 2–4 code) is database-agnostic — only `database/connection.py`, `config/settings.py`, `config/prompts.py`, and `database/descriptions_official.json` need updating for the new schemas.
