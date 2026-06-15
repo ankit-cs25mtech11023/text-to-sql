@@ -26,8 +26,9 @@ def run_with_correction(
     max_attempts: int = 3,
     temperature: float = 0.0,
     limit: int = 500,
+    max_tokens: int = 1024,
 ) -> CorrectionResult:
-    sql, messages = generator.generate(question, temperature=temperature)
+    sql, messages = generator.generate(question, temperature=temperature, max_tokens=max_tokens)
 
     for attempt in range(1, max_attempts + 1):
         # Step 1: validate
@@ -38,7 +39,8 @@ def run_with_correction(
                     success=False, sql=sql, error=val.error, attempts=attempt
                 )
             sql = generator.generate_correction(
-                question, sql, f"Validation error: {val.error}", messages, temperature=temperature
+                question, sql, f"Validation error: {val.error}", messages,
+                temperature=temperature, max_tokens=max_tokens,
             )
             continue
 
@@ -60,7 +62,8 @@ def run_with_correction(
             )
 
         sql = generator.generate_correction(
-            question, sql, f"Execution error: {result.error}", messages, temperature=temperature
+            question, sql, f"Execution error: {result.error}", messages,
+            temperature=temperature, max_tokens=max_tokens,
         )
 
     return CorrectionResult(success=False, sql=sql, error="Max attempts reached.", attempts=max_attempts)

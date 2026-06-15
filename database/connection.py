@@ -1,11 +1,18 @@
 from sqlalchemy import create_engine, Engine
 
 
-def get_engine(database_url: str, read_only: bool = False) -> Engine:
+def get_engine(
+    database_url: str,
+    read_only: bool = False,
+    statement_timeout_seconds: int | None = None,
+) -> Engine:
     if database_url.startswith("postgresql"):
-        connect_args = {}
+        opts = []
         if read_only:
-            connect_args["options"] = "-c default_transaction_read_only=on"
+            opts.append("-c default_transaction_read_only=on")
+        if statement_timeout_seconds:
+            opts.append(f"-c statement_timeout={statement_timeout_seconds * 1000}")
+        connect_args = {"options": " ".join(opts)} if opts else {}
         return create_engine(database_url, connect_args=connect_args)
 
     # SQLite fallback (legacy / testing)

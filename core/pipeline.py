@@ -26,7 +26,11 @@ class PipelineResult:
 class TextToSQLPipeline:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
-        self._engine: Engine = get_engine(settings.database_url, read_only=True)
+        self._engine: Engine = get_engine(
+            settings.database_url,
+            read_only=True,
+            statement_timeout_seconds=settings.query_timeout_seconds,
+        )
         extractor = SchemaExtractor(self._engine, settings.descriptions_path)
         ctx = extractor.get_full_context()
         self._allowed_tables: set[str] = extractor.get_allowed_table_names()
@@ -49,6 +53,7 @@ class TextToSQLPipeline:
             max_attempts=self._settings.max_correction_attempts,
             temperature=self._settings.temperature,
             limit=self._settings.query_result_limit,
+            max_tokens=self._settings.max_tokens,
         )
         return PipelineResult(
             success=result.success,
