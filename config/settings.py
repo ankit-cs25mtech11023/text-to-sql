@@ -1,16 +1,18 @@
-from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    groq_api_key: str = ""
-    openrouter_api_key: str = ""
     database_url: str = "postgresql:///gst_official"
     descriptions_path: str = "database/descriptions_official.json"
 
-    default_provider: str = "groq"
-    default_model: str = "llama-3.1-8b-instant"
+    # Local-only inference. APIs (Groq/OpenRouter) were dropped: the ~26.5K-token
+    # schema prompt exceeds free-tier context/TPM limits and rate caps make
+    # evaluation impractical. All models are served locally via vLLM (HPC).
+    default_provider: str = "vllm"
+    default_model: str = "xiyansql"
+    vllm_base_url: str = "http://localhost:8765/v1"
+    vllm_api_key: str = "EMPTY"
 
     temperature: float = 0.0
     max_tokens: int = 1024
@@ -20,24 +22,25 @@ class Settings(BaseSettings):
 
     few_shot_examples: int = 0  # 0 = zero-shot; set to 3 or 5 for ablation
 
-    # Models available per provider
-    groq_models: list[str] = [
-        "llama-3.1-8b-instant",
-        "llama-3.3-70b-versatile",
-    ]
-    openrouter_models: list[str] = [
-        "qwen/qwen3-coder:free",
-        "qwen/qwen3-next-80b-a3b-instruct:free",
+    # Locally served models (add more specialised SQL models here as they are
+    # downloaded to the HPC and served via vLLM).
+    vllm_models: list[str] = [
+        "xiyansql",
     ]
 
     @field_validator("default_provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:
-        if v not in ("groq", "openrouter"):
-            raise ValueError("default_provider must be 'groq' or 'openrouter'")
+        if v != "vllm":
+            raise ValueError("default_provider must be 'vllm' (local-only inference)")
         return v
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # extra="ignore" so stale .env keys (old GROQ/OPENROUTER) don't break startup.
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 def get_settings() -> Settings:

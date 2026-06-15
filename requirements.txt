@@ -4,8 +4,9 @@ SQLAlchemy==2.0.50
 greenlet==3.5.1
 psycopg2-binary==2.9.12
 
-# ── Phase 2: LLM Integration ──────────────────────────────────────────────────
-groq==1.4.0
+# ── Phase 2: LLM Integration (local-only via vLLM) ───────────────────────────
+# `openai` is the HTTP client for the vLLM OpenAI-compatible endpoint.
+# Groq/OpenRouter APIs dropped: 26.5K-token prompt exceeds free-tier limits.
 openai==2.40.0
 pydantic==2.13.4
 pydantic-settings==2.14.1
@@ -26,6 +27,9 @@ jiter==0.15.0
 sniffio==1.3.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
+
+# ── Evaluation tooling ───────────────────────────────────────────────────────
+tiktoken==0.13.0  # token counting (prompt-size checks; eval-phase metrics)
 
 # ── Phase 3: SQL Validation & Execution ──────────────────────────────────────
 sqlparse==0.5.5

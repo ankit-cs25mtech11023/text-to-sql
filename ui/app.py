@@ -22,20 +22,8 @@ EXAMPLE_QUESTIONS = [
 ]
 
 MODEL_OPTIONS: dict[str, tuple[str, str]] = {
-    "llama-3.1-8b-instant (Groq)": ("groq", "llama-3.1-8b-instant"),
-    "llama-3.3-70b-versatile (Groq)": ("groq", "llama-3.3-70b-versatile"),
+    "XiYanSQL-QwenCoder-7B (local vLLM)": ("vllm", "xiyansql"),
 }
-
-
-@st.cache_resource
-def get_available_providers() -> set[str]:
-    s = Settings()
-    available = set()
-    if s.groq_api_key:
-        available.add("groq")
-    if s.openrouter_api_key:
-        available.add("openrouter")
-    return available
 
 
 @st.cache_resource
@@ -94,7 +82,7 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Settings")
-        provider, model = "groq", "llama-3.3-70b-versatile"
+        provider, model = "vllm", "xiyansql"
         show_sql_first = st.toggle("Show SQL first", value=True)
         temperature = 0.0
 

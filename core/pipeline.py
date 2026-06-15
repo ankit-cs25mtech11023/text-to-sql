@@ -32,7 +32,12 @@ class TextToSQLPipeline:
         self._allowed_tables: set[str] = extractor.get_allowed_table_names()
 
         builder = PromptBuilder(ctx, few_shot_n=settings.few_shot_examples)
-        llm = make_client(settings.default_provider, self._api_key(settings), settings.default_model)
+        llm = make_client(
+            provider=settings.default_provider,
+            model=settings.default_model,
+            base_url=settings.vllm_base_url,
+            api_key=settings.vllm_api_key,
+        )
         self._generator = SQLGenerator(llm, builder)
 
     def ask(self, question: str) -> PipelineResult:
@@ -54,9 +59,3 @@ class TextToSQLPipeline:
             attempts=result.attempts,
             execution_time_ms=result.execution_time_ms,
         )
-
-    @staticmethod
-    def _api_key(settings: Settings) -> str:
-        if settings.default_provider == "groq":
-            return settings.groq_api_key
-        return settings.openrouter_api_key

@@ -6,7 +6,7 @@ Thesis project: build a Text-to-SQL pipeline that converts natural language ques
 
 **Key constraints:** open-source LLM ≤10B params (future GPU can only handle this size), PostgreSQL (official govt schemas), Streamlit frontend. Fraud detection on the whiteboard is a different student's thesis — not in our scope. One larger model (70B) included only as upper-bound baseline for thesis comparison — not a deployment candidate.
 
-**Inference path (current):** Local vLLM serving `XGenerationLab/XiYanSQL-QwenCoder-7B-2504` on the lab HPC (SLURM GPU node) is now the **primary** inference path — the ~26.5K-token static schema prompt exceeds free API tiers (Groq 6K TPM). Groq/OpenRouter free tiers remain as comparison baselines. This pulls the local-GPU work forward from Phase 6; see the HPC serving recipe in `CLAUDE.md`.
+**Inference path (current):** Local vLLM serving `XGenerationLab/XiYanSQL-QwenCoder-7B-2504` on the lab HPC (SLURM GPU node) is the **only** inference path. Hosted APIs (Groq, OpenRouter) were **dropped entirely** — the ~26.5K-token static schema prompt exceeds their free-tier context/TPM limits (Groq 6K TPM), and the rate caps make a full evaluation impractical, so they aren't worth the engineering time. Any additional comparison baselines will also be **local** SQL-specialist models (≤10B) served via vLLM. This pulls the local-GPU work forward from Phase 6; see the HPC serving recipe in `CLAUDE.md`.
 
 ---
 
@@ -14,7 +14,7 @@ Thesis project: build a Text-to-SQL pipeline that converts natural language ques
 
 ```
 Dev/
-├── .env.example / .env              # GROQ_API_KEY, DB path
+├── .env.example / .env              # VLLM_BASE_URL, DB URL
 ├── .gitignore
 ├── requirements.txt
 ├── config/
@@ -28,7 +28,7 @@ Dev/
 ├── core/
 │   ├── schema_extractor.py          # Reads DB metadata + descriptions.json → context string
 │   ├── prompt_builder.py            # Assembles system prompt + schema + question
-│   ├── llm_client.py                # Abstract LLM base + GroqClient implementation
+│   ├── llm_client.py                # Abstract LLM base + VLLMClient (local vLLM)
 │   ├── sql_generator.py             # Question → prompt → LLM → extract SQL
 │   ├── sql_validator.py             # Safety: SELECT-only, block DDL/DML via sqlparse
 │   ├── sql_executor.py              # Run SQL, return DataFrame or error
@@ -173,7 +173,7 @@ recoverable via git history if ever needed.
 
 ### 2A. LLM Client (`core/llm_client.py`)
 
-Abstract base class with provider implementations. Both Groq and OpenRouter use OpenAI-compatible APIs, so the client is a thin wrapper — just different base URLs and API keys.
+Abstract base class with a single local provider. vLLM exposes an OpenAI-compatible API, so the client is a thin wrapper over the `openai` SDK — just a `base_url` pointed at the SSH-tunneled HPC endpoint (no requests leave the tunnel, nothing is billed).
 
 ```python
 class LLMClient(ABC):
@@ -181,37 +181,22 @@ class LLMClient(ABC):
     def generate(self, messages: list[dict], temperature: float = 0.0, max_tokens: int = 1024) -> str:
         pass
 
-class GroqClient(LLMClient): ...
-class OpenRouterClient(LLMClient): ...
-# Future: class VLLMClient(LLMClient): ... for local GPU
+class VLLMClient(LLMClient): ...  # OpenAI-compatible, base_url=http://localhost:8765/v1
+
+def make_client(provider, model, base_url=None, api_key="EMPTY") -> LLMClient:
+    # only provider="vllm" is supported
 ```
 
-**Providers (free tiers only):**
+**Hosted APIs dropped.** Groq and OpenRouter (and their `GroqClient`/`OpenRouterClient` classes, API keys, and per-provider rate limiter) were **removed**. Reason: the ~26.5K-token schema prompt exceeds free-tier context/TPM limits (Groq 6K TPM) and the rate caps make evaluation impractical. Adding a model now means downloading it to the HPC and serving it via vLLM — no new client code, just a new `--served-model-name`.
 
-| Provider | Free Tier Limits | Notes |
-|----------|-----------------|-------|
-| Groq | 30 RPM, 6K TPM, ~1,000 req/day | Fastest inference, model roster changes often |
-| OpenRouter | ~20 RPM, ~200 req/day | More model variety, good fallback |
+**Models for comparison (all local via vLLM, ≤10B for deployment):**
 
-Spread evaluation load across both providers to work around daily limits.
+| Model | Params | Serving | Notes |
+|-------|--------|---------|-------|
+| `XiYanSQL-QwenCoder-7B-2504` | 7B | Local vLLM (HPC) | **Primary — serving.** Specialized SQL fine-tune (SQLite/PostgreSQL/MySQL), SOTA-class on BIRD |
+| *(optional, if time permits)* other specialised SQL models | ≤10B | Local vLLM (HPC) | Additional local baselines, served identically |
 
-**Models for comparison:**
-
-Deployment candidates (must be ≤10B — future GPU can only handle this):
-| Model | Params | Provider | Notes |
-|-------|--------|----------|-------|
-| `XiYanSQL-QwenCoder-7B-2504` | 7B | Local vLLM (HPC) | **Primary — now serving.** Specialized SQL fine-tune (SQLite/PostgreSQL/MySQL), SOTA-class on BIRD |
-| `llama-3.1-8b-instant` | 8B | Groq | Free-tier baseline (capped at 6K TPM — too small for full prompt) |
-| `qwen/qwen3-coder:free` | ~8B | OpenRouter | Free coding-model baseline |
-
-Upper-bound baseline (thesis comparison only — NOT for deployment):
-| Model | Params | Provider | Notes |
-|-------|--------|----------|-------|
-| `llama-3.3-70b-versatile` | 70B | Groq | Shows how close ≤10B gets to 70B |
-
-**Note:** Free tier models change frequently. Check provider docs before each eval run. The abstract LLMClient makes switching trivial — just change config.
-
-**Rate limiting:** Implement simple sleep-based limiter per provider. Critical during batch evaluation.
+**Rate limiting:** Not needed — local serving has no provider rate limits. (The earlier per-provider sleep limiter was removed.)
 
 ### 2B. Schema Extractor (`core/schema_extractor.py`)
 
@@ -252,11 +237,11 @@ SAMPLE DATA:
 USER: {question}
 ```
 
-**Start zero-shot** (saves tokens on Groq free tier). Few-shot configurable for ablation in Phase 5.
+**Start zero-shot.** Few-shot configurable for ablation in Phase 5.
 
 **Prompt structure (beyond rules):** System prompt includes four explicit sections before the DDL — TABLE RESPONSIBILITIES (what each table stores), COLUMN OWNERSHIP (which table each key column belongs to), FOREIGN KEY RELATIONSHIPS, and COMMON JOIN PATTERNS. This was added after observing that 8B models consistently misattribute tax columns (cgst_amount etc.) to `invoices` instead of `invoice_items`, causing 3-attempt failures. The explicit mapping generalises across all query types, not just tax queries.
 
-**Token behavior:** LLM APIs are stateless — every call must include the full context. The system prompt (~10K tokens) is sent with every query; there is no "send once" mechanism. Groq mitigates this with **implicit prefix caching**: identical system prompts are cached server-side, so repeated calls with the same schema context don't incur full compute cost. For the Streamlit UI, conversation history is accumulated across turns (system sent once, then user/assistant pairs grow) so within a chat session the schema is not re-sent redundantly.
+**Token behavior:** The chat API is stateless — every call must include the full context. The system prompt (~26.5K tokens with the official schemas) is sent with every query; there is no "send once" mechanism. vLLM mitigates this with **automatic prefix caching** (enabled by default): identical system-prompt prefixes are cached in the KV cache server-side, so repeated calls with the same schema context skip recompute of the shared prefix. For the Streamlit UI, conversation history is accumulated across turns (system sent once, then user/assistant pairs grow) so within a chat session the schema is not re-sent redundantly.
 
 ### 2D. SQL Generator (`core/sql_generator.py`)
 
@@ -275,8 +260,7 @@ class SQLGenerator:
 - `config/settings.py`
 
 ### Libraries
-- `groq` (Groq SDK)
-- `openai` (OpenRouter uses OpenAI-compatible API)
+- `openai` (HTTP client for the vLLM OpenAI-compatible endpoint)
 - `sqlalchemy`
 - `python-dotenv`
 - `pydantic`
@@ -444,14 +428,14 @@ streamlit run ui/app.py
 
 | Run | Config | Purpose |
 |-----|--------|---------|
-| Baseline | llama-3.1-8b, 0-shot, descriptions=ON, sample_rows=ON, max_attempts=3, temp=0.0 | Core result — establishes accuracy before RAG |
+| Baseline | XiYanSQL-7B (local vLLM), 0-shot, descriptions=ON, sample_rows=ON, max_attempts=3, temp=0.0 | Core result — establishes accuracy before RAG |
 
-~130 API calls total. Results saved to `evaluation/results/baseline.csv`.
+~130 local inference calls total (no API limits). Results saved to `evaluation/results/baseline.csv`.
 
 The baseline result feeds directly into Phase 5-B as the "before RAG" number. The primary thesis comparison is **baseline (static prompt) vs RAG pipeline**.
 
-**Deferred (resume when API constraints lift or when needed):**
-- Model ablations: qwen3-coder, llama-3.3-70b upper bound
+**Deferred (resume when needed):**
+- Model ablations: additional local SQL-specialist models (≤10B, served via vLLM), if time permits
 - Schema ablations: without descriptions, without sample rows
 - Few-shot ablations: 0-shot vs 3-shot
 - Self-correction ablation: 1 attempt vs 3 attempts
@@ -473,7 +457,7 @@ These are fully designed and ready to run — just not prioritised yet. Resume b
 
 ### Verification
 ```bash
-python evaluation/benchmark.py --model llama-3.1-8b-instant --output evaluation/results/
+python evaluation/benchmark.py --model xiyansql --output evaluation/results/
 # Generates CSV with per-question results and summary metrics
 ```
 
@@ -607,7 +591,7 @@ The specialized Text-to-SQL model recommended by the guide, `XGenerationLab/XiYa
 
 - **Dialects**: SQLite, PostgreSQL, MySQL — all supported (matches our `gst_official` PG DB)
 - **Inference**: vLLM, OpenAI-compatible endpoint on port 8765, `--enforce-eager`, `--max-model-len 32768`
-- **Client**: add a vLLM/OpenAI client to `core/llm_client.py` + `make_client` (OpenRouterClient is already an OpenAI wrapper — generalize it with a `base_url`)
+- **Client**: `VLLMClient` in `core/llm_client.py` + `make_client(provider="vllm", ...)` — OpenAI-compatible wrapper with `base_url` (done in Phase 2)
 
 ---
 
@@ -617,9 +601,9 @@ The specialized Text-to-SQL model recommended by the guide, `XGenerationLab/XiYa
 
 | Run | Config | Purpose |
 |-----|--------|---------|
-| RAG pipeline | Schema RAG + Few-shot RAG, llama-3.1-8b, max_attempts=3, temp=0.0 | Core RAG result |
+| RAG pipeline | Schema RAG + Few-shot RAG, XiYanSQL-7B (local vLLM), max_attempts=3, temp=0.0 | Core RAG result |
 
-~130 API calls. Results saved to `evaluation/results/rag.csv`.
+~130 local inference calls. Results saved to `evaluation/results/rag.csv`.
 
 **Primary thesis comparison:** `baseline.csv` vs `rag.csv` — does RAG improve accuracy on GST domain?
 
@@ -627,7 +611,7 @@ The specialized Text-to-SQL model recommended by the guide, `XGenerationLab/XiYa
 - Schema RAG only vs Few-shot RAG only vs Both
 - Top-K=3 vs Top-K=5 retrieved tables
 - Q-SQL store size: 10 vs 25 vs 50 pairs
-- RAG + llama-3.1-8b vs RAG + XiYanSQL-7B (needs GPU)
+- RAG + additional local SQL model vs RAG + XiYanSQL-7B (if a second model is served)
 
 ---
 
@@ -698,7 +682,7 @@ print('Shots:', [s['question'] for s in shots])
 
 ### 6E. Caching
 - Hash-based query cache (exact match on normalized question)
-- Reduces LLM API calls for repeated questions
+- Reduces redundant LLM inference for repeated questions
 
 ### 6F. Hindi/Regional Language Support (Future)
 - Modify system prompt to accept Hindi/Hinglish questions
@@ -717,7 +701,9 @@ print('Shots:', [s['question'] for s in shots])
 | 4 | Phase 4 `[DONE]` | Streamlit demo built | `main` |
 | 5 | Phase 1 (redo) `[DONE]` | Official schemas (EWB, GSTR-3B, GSTR-7) seeded + descriptions + multi-schema extractor | `main` |
 | 6 | Infra `[DONE]` | Local vLLM serving XiYanSQL-7B-2504 on HPC, endpoint smoke-tested | `main` |
-| **Now** | Infra → Phase 2 🔄 | Wire vLLM client into pipeline + verify end-to-end SQL on official schemas | `main` |
+| 7 | Phase 2 `[DONE]` | vLLM client wired into pipeline; hosted APIs (Groq/OpenRouter) dropped — local-only inference | `main` |
+| 7 | Phase 2/3 verify `[DONE]` | End-to-end run on `gst_official` via tunneled vLLM PASSED (2026-06-15); EWB queries correct; found GSTR-7↔GSTR-3B module confusion | `main` |
+| **Now** | Phase 2 prompt tuning 🔄 | Strengthen GSTR-7 vs GSTR-3B disambiguation in `config/prompts.py`; then Phase 5 gold pairs + baseline eval | `main` |
 | Next | Phase 1 (redo) | 4th schema from guide | `main` |
 | TBD | Phase 5 | Gold Q-SQL pairs for official schemas + baseline evaluation | `main` |
 | TBD | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG evaluation | `rag-enhancement` |
@@ -730,8 +716,7 @@ print('Shots:', [s['question'] for s in shots])
 
 ```
 # Core
-groq>=0.9.0
-openai>=1.0
+openai>=1.0          # HTTP client for the local vLLM OpenAI-compatible endpoint
 sqlalchemy>=2.0
 sqlparse>=0.5
 python-dotenv>=1.0
@@ -769,13 +754,12 @@ psycopg2-binary>=2.9
 
 | Risk | Mitigation |
 |------|------------|
-| Provider drops/changes free tier models | LLM client is abstract — switch provider or model in config |
 | ≤10B models underperform on complex JOINs | Self-correction handles many failures. Document as thesis finding |
-| Daily request limits slow evaluation | Spread across Groq + OpenRouter. ~1,200 combined req/day is enough for one full eval run |
+| HPC GPU unavailable during a work session | Inference is local-only; no API fallback. Mitigation: `tmux` + re-allocate when a GPU frees up; serving recipe is fully documented so re-spin is fast |
 | Official schemas too large for prompt | 19+ tables with dense column comments. RAG (Phase 5-B) is the natural fix — retrieve only relevant tables per query. Static prompt approach requires careful column pruning (use LLM-HIDE annotations). |
 | Schema complexity: padded strings, quoted columns, VARCHAR dates | Document in descriptions_official.json as explicit LLM instructions (TRIM, TO_DATE, double-quote). Test with representative queries. |
 | 4th schema not yet received | Build pipeline to be modular — add new schema/descriptions without touching core pipeline |
-| Shared HPC GPU contention / time limits | Lab SLURM node is shared; jobs have `--time` caps and CPUs/GPUs get fully allocated. Mitigation: `tmux` + re-allocate when free, never cancel others' jobs, Groq/OpenRouter free tiers as fallback |
+| Shared HPC GPU contention / time limits | Lab SLURM node is shared; jobs have `--time` caps and CPUs/GPUs get fully allocated. Mitigation: `tmux` + re-allocate when free, never cancel others' jobs (no API fallback — local-only) |
 | SQL injection in govt deployment | Validator blocks non-SELECT + DB has read-only role. Defense in depth |
 | FAISS retrieval fetches wrong tables | 19+ tables makes this more likely than before. Mitigation: always include core tables (tbl_ewb_parta_ewb, r3b_*, tbl_gst_rtn_r7) regardless of retrieval |
 | RAG branch diverges too far from main | Keep `RAGPipeline` as a subclass — base pipeline on main is untouched. Merge is clean. |

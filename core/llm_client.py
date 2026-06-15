@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-from groq import Groq
 from openai import OpenAI
 
 
@@ -15,32 +14,18 @@ class LLMClient(ABC):
         pass
 
 
-class GroqClient(LLMClient):
-    def __init__(self, api_key: str, model: str = "llama-3.1-8b-instant") -> None:
-        self._client = Groq(api_key=api_key)
-        self.model = model
-
-    def generate(
+class VLLMClient(LLMClient):
+    # Local vLLM OpenAI-compatible endpoint (SSH-tunneled HPC GPU server).
+    # `openai` here is just the HTTP client for the OpenAI-compatible protocol
+    # vLLM exposes — no calls leave the tunnel, nothing is billed.
+    # vLLM ignores the key, but the OpenAI SDK rejects an empty string.
+    def __init__(
         self,
-        messages: list[dict],
-        temperature: float = 0.0,
-        max_tokens: int = 1024,
-    ) -> str:
-        response = self._client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-        return response.choices[0].message.content.strip()
-
-
-class OpenRouterClient(LLMClient):
-    def __init__(self, api_key: str, model: str = "qwen/qwen3-coder:free") -> None:
-        self._client = OpenAI(
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1",
-        )
+        base_url: str = "http://localhost:8765/v1",
+        model: str = "xiyansql",
+        api_key: str = "EMPTY",
+    ) -> None:
+        self._client = OpenAI(api_key=api_key or "EMPTY", base_url=base_url)
         self.model = model
 
     def generate(
@@ -60,11 +45,14 @@ class OpenRouterClient(LLMClient):
 
 def make_client(
     provider: str,
-    api_key: str,
     model: str,
+    base_url: str | None = None,
+    api_key: str = "EMPTY",
 ) -> LLMClient:
-    if provider == "groq":
-        return GroqClient(api_key=api_key, model=model)
-    if provider == "openrouter":
-        return OpenRouterClient(api_key=api_key, model=model)
-    raise ValueError(f"Unknown provider: {provider!r}")
+    if provider == "vllm":
+        return VLLMClient(
+            base_url=base_url or "http://localhost:8765/v1",
+            model=model,
+            api_key=api_key,
+        )
+    raise ValueError(f"Unknown provider: {provider!r} (only 'vllm' is supported)")
