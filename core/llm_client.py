@@ -24,8 +24,17 @@ class VLLMClient(LLMClient):
         base_url: str = "http://localhost:8765/v1",
         model: str = "xiyansql",
         api_key: str = "EMPTY",
+        timeout: float = 120.0,
+        max_retries: int = 1,
     ) -> None:
-        self._client = OpenAI(api_key=api_key or "EMPTY", base_url=base_url)
+        # Fail fast on a dead/flapping endpoint instead of hanging on the SDK's
+        # 600s default + retries (e.g. when the SSH tunnel or HPC server drops).
+        self._client = OpenAI(
+            api_key=api_key or "EMPTY",
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+        )
         self.model = model
 
     def generate(
