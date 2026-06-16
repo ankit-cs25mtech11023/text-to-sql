@@ -365,7 +365,6 @@ print(result.data)  # DataFrame with state names and tax totals
 |  Assistant:                                        |
 |  [SQL tab] SELECT SUM(ii.igst_amount) ...          |
 |  [Results tab] | total_igst | 4,523,891.50 |      |
-|  [Chart tab] (bar chart if applicable)             |
 |  Execution time: 45ms | Attempts: 1               |
 +--------------------------------------------------+
 |  Type your question...                    [Send]   |
@@ -376,7 +375,7 @@ print(result.data)  # DataFrame with state names and tax totals
 - `st.chat_input` + `st.chat_message` for chat UX
 - `@st.cache_resource` for pipeline init (expensive)
 - `st.session_state` for chat history
-- Response in tabs: SQL | Results | Chart
+- Response in tabs: SQL | Results
 - Sidebar example questions (clickable):
   - "What is the total tax collected by each state?"
   - "Show the top 10 suppliers by taxable value"
