@@ -36,24 +36,28 @@ python evaluation/benchmark.py            # uses test_questions.json, writes res
 
 ---
 
-## 2. The test set (current: 21 pairs — a seed)
+## 2. The test set (112 verified pairs)
 
-Right now we have **21 verified question–SQL pairs**. Each gold SQL has been
-executed against `gst_official` to confirm it runs and returns a sensible answer.
+We have **112 verified question–SQL pairs**. Every gold SQL has been executed
+against `gst_official` (all 112 run cleanly, no errors / empty / NULL results).
 
-| Split | Count | Notes |
-|-------|-------|-------|
-| **By module** | EWB 10 · GSTR-3B 5 · GSTR-7 6 | all three official modules |
-| **By difficulty** | simple 10 · moderate 6 · challenging 5 | see below |
+| Split | Counts |
+|-------|--------|
+| **By module** | EWB 42 · GSTR-3B 38 · GSTR-7 32 |
+| **By difficulty** | simple 49 · moderate 35 · challenging 28 |
+| **By category** | aggregation, filtering, grouping, ranking, join, subquery, having, decode, quirk, domain_specific |
 
 **Difficulty tiers** (the standard Spider/BIRD framing):
-- **simple** — one table, a basic `COUNT`/`SUM`/`WHERE`. *("How many e-way bills are there?")*
+- **simple** — one table, a basic `COUNT`/`SUM`/`AVG`/`WHERE`. *("How many e-way bills are there?")*
 - **moderate** — a 2-table `JOIN`, `GROUP BY` + ranking, or a date/condition filter. *("Top 5 taxpayers by outward value in FY 2025-26")*
-- **challenging** — 3+ tables, decode-table joins, or domain knowledge. *("Total state income per financial year, labelled by year" — needs the `fy_flag → mst_fy_years_t` decode join)*
+- **challenging** — 3+ tables, decode-table joins, subqueries, `HAVING`, or domain knowledge. *("Total state income per financial year, labelled by year" — needs the `fy_flag → mst_fy_years_t` decode join)*
 
-This is a **seed**. The target is **100+** pairs (≈40 simple / 35 moderate / 25
-challenging) so the numbers are statistically meaningful. With only 21 items,
-one question flipping changes the score by ~5 points.
+The **category** tag is what we use to spot *repeating* failure patterns
+(e.g. if `decode` joins fail systematically) — that's how we triage a real
+weakness from a one-off, and decide general-fix vs RAG. The set deliberately
+exercises the data quirks too: quoted identifiers (`"InvVal"`, `"range"`),
+string-numeric casts (`travdist`), `VARCHAR` dates (`TO_DATE`), the partition
+key (`fy_flag`), and the GSTR-7 FK-naming quirk.
 
 ---
 

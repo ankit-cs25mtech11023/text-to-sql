@@ -130,7 +130,7 @@ def _summary(rows, per_run_overall, runs, out_path) -> None:
         print(f"OVERALL (n={n})   EX={100*ex/n:5.1f}%  VER={100*ver/n:5.1f}%  EM={100*em/n:5.1f}%")
     print("=" * 60)
 
-    for key in ("difficulty", "module"):
+    for key in ("difficulty", "module", "category"):
         groups: dict[str, list[dict]] = defaultdict(list)
         for r in rows:
             groups[r[key]].append(r)
