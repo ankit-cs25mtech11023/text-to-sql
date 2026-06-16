@@ -376,15 +376,15 @@ print(result.data)  # DataFrame with state names and tax totals
 - `@st.cache_resource` for pipeline init (expensive)
 - `st.session_state` for chat history
 - Response in tabs: SQL | Results
-- Sidebar example questions (clickable):
-  - "What is the total tax collected by each state?"
-  - "Show the top 10 suppliers by taxable value"
-  - "Monthly trend of B2B invoice count?"
-  - "Which HSN codes have the highest IGST collection?"
-  - "How many export invoices were filed in Q1 2026?"
-  - "Average invoice value for 18% tax rate items?"
-  - "List suppliers who filed more than 100 invoices"
-  - "Compare CGST vs IGST collection across all months"
+- Sidebar example questions (clickable; official-schema, all verified correct on `gst_official`):
+  - "How many e-way bills are there?"
+  - "What is the total IGST collected on inter-state e-way bills?"
+  - "Which 3 HSN codes have the highest total assessable amount?"
+  - "How many GSTR-3B returns were filed?"
+  - "List the top 5 taxpayers by outward taxable value in FY 2025-26."
+  - "What is the total state income for financial year 2024-25?"
+  - "How many GSTR-7 returns have been filed?"
+  - "What is the total TDS deducted across all GSTR-7 returns?"
 
 ### Files to Create
 - `ui/app.py`
