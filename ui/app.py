@@ -82,7 +82,6 @@ def main() -> None:
         provider, model = "vllm", "xiyansql"
         st.caption(f"Model: `{model}` — local vLLM (XiYanSQL-QwenCoder-7B)")
         show_sql_first = st.toggle("Show SQL first", value=True)
-        temperature = st.slider("Temperature", 0.0, 1.0, 0.0, 0.1)
 
         st.divider()
         st.subheader("Example Questions")
@@ -151,7 +150,6 @@ def main() -> None:
         st.session_state.messages.append({"role": "user", "content": question})
 
         pipeline = load_pipeline(provider, model)
-        pipeline._settings.temperature = temperature
 
         result_box: list = [None]
 
