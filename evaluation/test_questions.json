@@ -1,0 +1,89 @@
+[
+  {"id": 1, "module": "EWB", "difficulty": "simple", "category": "aggregation",
+   "question": "How many e-way bills are there?",
+   "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb;"},
+
+  {"id": 2, "module": "EWB", "difficulty": "simple", "category": "aggregation",
+   "question": "What is the total assessable value across all e-way bills?",
+   "gold_sql": "SELECT SUM(assval) AS total_assval FROM public.tbl_ewb_parta_ewb;"},
+
+  {"id": 3, "module": "EWB", "difficulty": "simple", "category": "domain_specific",
+   "question": "What is the total IGST collected on inter-state e-way bills?",
+   "gold_sql": "SELECT SUM(igstval) AS total_igst FROM public.tbl_ewb_parta_ewb WHERE frstat <> tostat;"},
+
+  {"id": 4, "module": "EWB", "difficulty": "simple", "category": "filtering",
+   "question": "How many e-way bills are cancelled?",
+   "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'CNL';"},
+
+  {"id": 5, "module": "EWB", "difficulty": "simple", "category": "domain_specific",
+   "question": "What is the total tax (CGST + SGST + IGST) collected across all e-way bills?",
+   "gold_sql": "SELECT SUM(cgstval + sgstval + igstval) AS total_tax FROM public.tbl_ewb_parta_ewb;"},
+
+  {"id": 6, "module": "EWB", "difficulty": "moderate", "category": "aggregation",
+   "question": "How many e-way bills are there for each status?",
+   "gold_sql": "SELECT status, COUNT(*) AS n FROM public.tbl_ewb_parta_ewb GROUP BY status;"},
+
+  {"id": 7, "module": "EWB", "difficulty": "moderate", "category": "ranking",
+   "question": "Which 3 HSN codes have the highest total assessable amount?",
+   "gold_sql": "SELECT hsncod, SUM(assamt) AS total_assamt FROM public.tbl_ewb_parta_ewb_itemlist GROUP BY hsncod ORDER BY total_assamt DESC LIMIT 3;",
+   "order_matters": true},
+
+  {"id": 8, "module": "EWB", "difficulty": "moderate", "category": "ranking",
+   "question": "Which destination state has the highest total IGST in e-way bills?",
+   "gold_sql": "SELECT tostat, SUM(igstval) AS total_igst FROM public.tbl_ewb_parta_ewb GROUP BY tostat ORDER BY total_igst DESC LIMIT 1;",
+   "order_matters": true},
+
+  {"id": 9, "module": "EWB", "difficulty": "challenging", "category": "join",
+   "question": "What is the total assessable amount of items on active e-way bills?",
+   "gold_sql": "SELECT SUM(i.assamt) AS total_assamt FROM public.tbl_ewb_parta_ewb_itemlist i JOIN public.tbl_ewb_parta_ewb e ON i.idtbl_ewb_parta_ewb = e.idtbl_ewb_parta_ewb WHERE e.status = 'ACT';"},
+
+  {"id": 10, "module": "EWB", "difficulty": "challenging", "category": "join",
+   "question": "How many e-way bills had their validity extended?",
+   "gold_sql": "SELECT COUNT(DISTINCT pb.idtbl_ewb_partb_ewb) AS n FROM public.tbl_ewb_partb_ewb pb JOIN public.tbl_ewb_partb_ewb_extenddet x ON x.idtbl_ewb_partb_ewb = pb.idtbl_ewb_partb_ewb;"},
+
+  {"id": 11, "module": "GSTR-3B", "difficulty": "simple", "category": "aggregation",
+   "question": "How many GSTR-3B returns were filed?",
+   "gold_sql": "SELECT COUNT(*) AS n FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned;"},
+
+  {"id": 12, "module": "GSTR-3B", "difficulty": "simple", "category": "aggregation",
+   "question": "How many distinct taxpayers filed GSTR-3B?",
+   "gold_sql": "SELECT COUNT(DISTINCT gstin) AS n FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned;"},
+
+  {"id": 13, "module": "GSTR-3B", "difficulty": "simple", "category": "domain_specific",
+   "question": "What is the total state income for financial year 2024-25?",
+   "gold_sql": "SELECT SUM(state_income) AS total_state_income FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned WHERE fy_flag = 8;"},
+
+  {"id": 14, "module": "GSTR-3B", "difficulty": "moderate", "category": "ranking",
+   "question": "List the top 5 taxpayers by outward taxable value in FY 2025-26.",
+   "gold_sql": "SELECT gstin, SUM(osup_det_txval) AS total_outward FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned WHERE fy_flag = 9 GROUP BY gstin ORDER BY total_outward DESC LIMIT 5;",
+   "order_matters": true},
+
+  {"id": 15, "module": "GSTR-3B", "difficulty": "challenging", "category": "join",
+   "question": "What is the total state income for each financial year, labelled by year?",
+   "gold_sql": "SELECT y.desc_year, SUM(r.state_income) AS total_state_income FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned r JOIN common.mst_fy_years_t y ON y.flag_fy = r.fy_flag GROUP BY y.desc_year;"},
+
+  {"id": 16, "module": "GSTR-7", "difficulty": "simple", "category": "aggregation",
+   "question": "How many GSTR-7 returns have been filed?",
+   "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7;"},
+
+  {"id": 17, "module": "GSTR-7", "difficulty": "simple", "category": "aggregation",
+   "question": "How many TDS amendments were filed?",
+   "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa;"},
+
+  {"id": 18, "module": "GSTR-7", "difficulty": "moderate", "category": "domain_specific",
+   "question": "What is the total TDS deducted across all GSTR-7 returns?",
+   "gold_sql": "SELECT SUM(iamt + camt + samt) AS total_tds FROM public.tbl_gst_rtn_r7_tds;"},
+
+  {"id": 19, "module": "GSTR-7", "difficulty": "moderate", "category": "join",
+   "question": "List each deductor and the total TDS they deducted.",
+   "gold_sql": "SELECT r.gstin, SUM(t.iamt + t.camt + t.samt) AS total_tds FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin;"},
+
+  {"id": 20, "module": "GSTR-7", "difficulty": "challenging", "category": "ranking",
+   "question": "Which deductor deducted TDS from the most distinct deductees?",
+   "gold_sql": "SELECT r.gstin, COUNT(DISTINCT t.gstin_ded) AS n_deductees FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin ORDER BY n_deductees DESC LIMIT 1;",
+   "order_matters": true},
+
+  {"id": 21, "module": "GSTR-7", "difficulty": "challenging", "category": "join",
+   "question": "What is the total invoice-level TDS withheld across all GSTR-7 returns?",
+   "gold_sql": "SELECT SUM(iamt + camt + samt) AS total_tds FROM public.tbl_gst_rtn_r7_tds_inv;"}
+]
