@@ -62,13 +62,13 @@
 ## Phase 5: Evaluation & Benchmarking
 
 - [x] `evaluation/metrics.py` — EX / VER / EM. EX is robust: gold = minimal projection, prediction may carry EXTRA columns (row-correlation preserved via column-tuple projection), row order ignored unless `order_matters`. Unit-tested (extra-col, row-swap, reorder, fewer-col, EM-normalize).
-- [x] `evaluation/benchmark.py` — batch runner → per-question CSV + summary (overall + by difficulty + by module). (No caching/resume — local inference is fast, not needed.)
+- [x] `evaluation/benchmark.py` — batch runner → per-question CSV + summary (overall + by difficulty + by module) + `--runs N` for mean ± std and flaky-question detection. (No caching/resume — local inference is fast, not needed.)
 - [~] `evaluation/test_questions.json` — **21/100+** verified gold pairs (EWB 10, GSTR-3B 5, GSTR-7 6; simple/moderate/challenging); all gold SQL verified to execute on `gst_official`. **Seed — grow to 100+.**
-- [x] Ran baseline on XiYanSQL-7B (21-Q seed) → `evaluation/results/baseline.csv` (gitignored). **EX ≈ 81%, VER ≈ 90–95%, EM ≈ 5%**; gradient simple→challenging (~90%→~50%).
+- [x] Baseline on XiYanSQL-7B (21-Q seed, **5 runs**) → `evaluation/results/baseline.csv` (gitignored). **EX 81.0% ± 0.0, VER 90.5% ± 0.0, EM ≈ 5%**; gradient simple 90% / moderate 100% / challenging 40%. Bitwise-stable across all 5 runs (same 4 fail each time).
 - [x] Verification: CSV shows per-question EX/VER/EM/attempts/time.
-- [ ] **Finding to act on:** vLLM is **not bitwise-deterministic at temp 0** — EX varies ~±5% run-to-run (Q9 flipped pass↔fail across runs). For the thesis number, run K times and report mean ± std (add `--runs N` to benchmark).
+- [x] Determinism check: vLLM **mostly deterministic at temp 0** (5/5 runs identical, std 0.0); one earlier one-off flip seen, so K-run mean±std is kept to *confirm* stability, not assumed.
+- [ ] **Triage the 4 stable failures (per [[feedback_baseline_production_rigor]]):** #4 `cancelled`→canceldet (name-trap), #9 active-bills item JOIN (bad alias), #15 GSTR-3B decode join `fy_flag`→`mst_fy_years_t` (hallucinated `fp`), #21 invoice-level TDS (`amt_ded` trap). For each: is it fixable by a *general* (non-overfit) improvement → fix it; else RAG/few-shot target.
 - [ ] Grow gold set to 100+ (40 simple / 35 moderate / 25 challenging).
-- [ ] Consistent real-error buckets so far: name-traps (`cancelled`→canceldet, `amt_ded`), missed decode joins (GSTR-3B `fy_flag`→`mst_fy_years_t`) — RAG/few-shot targets.
 
 ## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
 

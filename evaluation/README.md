@@ -158,11 +158,12 @@ by module:      EWB 80% · GSTR-3B 80% · GSTR-7 83%
 
 ## 6. Methodology caveats (important)
 
-1. **vLLM is not bitwise-deterministic, even at temperature 0.** The same
-   question can yield a slightly different query on different runs, so EX varies
-   ~±5% on this small set (we have observed a question flip pass↔fail between
-   runs). **The trustworthy thesis number is the mean ± std over K runs**, not a
-   single run. (Planned: `--runs N` flag.)
+1. **vLLM is usually — but not *guaranteed* — deterministic at temperature 0.**
+   A 5-run baseline came back bitwise-stable (**EX 81.0% ± 0.0**), but we *did*
+   observe a single question flip pass↔fail in earlier runs (likely tied to
+   KV/prefix-cache state). So determinism isn't assured. Use `--runs N` to repeat
+   and report **mean ± std** — it both gives the trustworthy number and *confirms*
+   whether a run was stable (std = 0) or noisy (std > 0).
 2. **EX is conservative on a small set.** With 21 items, ±1 question ≈ ±5 points.
    The 100+ set fixes this.
 3. **Gold quality is load-bearing.** Every gold SQL is executed and eyeballed
@@ -172,11 +173,15 @@ by module:      EWB 80% · GSTR-3B 80% · GSTR-7 83%
 
 ## 7. Current baseline (seed, XiYanSQL-QwenCoder-7B, static prompt)
 
-| Metric | Value (21-item seed) |
-|--------|----------------------|
-| EX  | ≈ 81% |
-| VER | ≈ 90–95% |
+| Metric | Value (21-item seed, 5 runs) |
+|--------|------------------------------|
+| EX  | **81.0% ± 0.0** |
+| VER | **90.5% ± 0.0** |
 | EM  | ≈ 5% |
+
+Per-difficulty (EX): simple 90% · moderate 100% · challenging 40%.
+The same 4 questions failed on every run (#4, #9, #15, #21) — see the error
+buckets below; these are the triage targets (general-fix vs RAG).
 
 Stable real-error categories (the RAG/few-shot targets):
 - **Name-traps** — "cancelled" → `canceldet` event log instead of `status='CNL'`; "deducted" → `amt_ded` (the base) instead of `iamt+camt+samt` (the tax).
