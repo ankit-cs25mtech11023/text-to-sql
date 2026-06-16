@@ -10,15 +10,17 @@ import streamlit as st
 from config.settings import Settings
 from core.pipeline import TextToSQLPipeline
 
+# Grounded in the official schemas (EWB / GSTR-3B / GSTR-7); all verified to
+# produce correct SQL on gst_official.
 EXAMPLE_QUESTIONS = [
-    "What is the total tax collected by each state?",
-    "Show the top 10 suppliers by taxable value",
-    "Monthly trend of B2B invoice count?",
-    "Which HSN codes have the highest IGST collection?",
-    "How many export invoices were filed in Q1 2026?",
-    "Average invoice value for 18% tax rate items?",
-    "List suppliers who filed more than 100 invoices",
-    "Compare CGST vs IGST collection across all months",
+    "How many e-way bills are there?",
+    "What is the total IGST collected on inter-state e-way bills?",
+    "Which 3 HSN codes have the highest total assessable amount?",
+    "How many GSTR-3B returns were filed?",
+    "List the top 5 taxpayers by outward taxable value in FY 2025-26.",
+    "What is the total state income for financial year 2024-25?",
+    "How many GSTR-7 returns have been filed?",
+    "What is the total TDS deducted across all GSTR-7 returns?",
 ]
 
 @st.cache_resource
@@ -78,8 +80,9 @@ def main() -> None:
     with st.sidebar:
         st.header("Settings")
         provider, model = "vllm", "xiyansql"
+        st.caption(f"Model: `{model}` — local vLLM (XiYanSQL-QwenCoder-7B)")
         show_sql_first = st.toggle("Show SQL first", value=True)
-        temperature = 0.0
+        temperature = st.slider("Temperature", 0.0, 1.0, 0.0, 0.1)
 
         st.divider()
         st.subheader("Example Questions")

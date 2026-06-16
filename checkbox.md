@@ -54,8 +54,11 @@
 
 ## Phase 4: Streamlit UI
 
-- [x] `ui/app.py` — Chat interface with SQL/Results/Chart tabs
-- [ ] Verification: All 8 example questions work in browser
+- [x] `ui/app.py` — Chat interface (SQL/Results tabs, async query + Stop button)
+- [x] Reworked for vLLM + official schemas (2026-06-16): replaced stale toy-schema example questions with 8 official-schema ones (EWB/GSTR-3B/GSTR-7, all verified correct), added model caption + Temperature slider
+- [x] Verification (headless): `streamlit.testing.AppTest` renders clean (no exceptions; title, 8 example buttons, Show-SQL toggle, Temperature slider, model caption, chat input all present); all **8/8 sidebar example questions** pass end-to-end through live vLLM (1 attempt each, correct results)
+- [ ] *(optional)* Final visual click-through in a real browser (async thread + st.rerun polling glue) — `streamlit run ui/app.py`
+- [ ] *(known gap, pre-existing)* Chart tab from the plan's layout not implemented (only SQL/Results)
 
 ## Phase 5: Evaluation & Benchmarking
 
