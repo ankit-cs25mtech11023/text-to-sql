@@ -67,9 +67,9 @@
 - [x] Baseline on XiYanSQL-7B (21-Q seed, **5 runs**) → `evaluation/results/baseline.csv` (gitignored). **EX 81.0% ± 0.0, VER 90.5% ± 0.0, EM ≈ 5%**; gradient simple 90% / moderate 100% / challenging 40%. Bitwise-stable across all 5 runs (same 4 fail each time).
 - [x] Verification: CSV shows per-question EX/VER/EM/attempts/time.
 - [x] Determinism check: vLLM **mostly deterministic at temp 0** (5/5 runs identical, std 0.0); one earlier one-off flip seen, so K-run mean±std is kept to *confirm* stability, not assumed.
-- [ ] **Triage the 4 stable failures (per [[feedback_baseline_production_rigor]]):** #4 `cancelled`→canceldet (name-trap), #9 active-bills item JOIN (bad alias), #15 GSTR-3B decode join `fy_flag`→`mst_fy_years_t` (hallucinated `fp`), #21 invoice-level TDS (`amt_ded` trap). For each: is it fixable by a *general* (non-overfit) improvement → fix it; else RAG/few-shot target.
+- [x] **Triage failures (per [[feedback_baseline_production_rigor]]) — done at 112-scale (2026-06-17).** General, non-overfit only: (1) **test-quality gold fixes** — 14 ranking golds → entity-only (minimal-projection per the EX metric spec), #62 decode→`desc_year`, #77 fixed broken filings-vs-taxpayers count (24→4), #72 boundary-tie top-5→top-4; (2) **one general prompt fact** — 3B tax payable = `iamt+camt+samt+csamt`; `*_tx`/`tax_pay` belong to GSTR-7 (fixed #68/#79). A decode-rule prose attempt was **reverted** (0 EX gain + a regression). Residuals classified as RAG/few-shot targets — see plan.md "Static-Prompt Ceiling".
 - [x] Grow gold set to 100+ → **112** done (no artificial cap; broad coverage).
-- [ ] Run full 112-question baseline (mean±std) and triage failure patterns by category.
+- [x] **Full 112-question baseline (runs=3, 2026-06-17) → EX 90.2% ± 0.0, VER 97.6% ± 0.5** (up from 86.6% pre-triage). By difficulty: simple 98.0 / moderate 89.5 / challenging 77.4. Stable across runs (flaky: #62, #110). → `evaluation/results/baseline.csv` (gitignored).
 
 ## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
 

@@ -116,6 +116,9 @@ GST DOMAIN RULES:
 - Intra-state movement (frstat = tostat in EWB; intra in GSTR): tax splits into CGST + SGST (IGST = 0)
 - Inter-state movement (frstat <> tostat): only IGST is non-zero (CGST = SGST = 0)
 - EWB "total tax" = cgstval + sgstval + igstval + cessval
+- GSTR-3B "tax payable / liability" = iamt (IGST) + camt (CGST) + samt (SGST) + csamt (Cess), the
+  period rollup totals on the 3B table. The *_tx columns (igst_tx/cgst_tx/sgst_tx) and the
+  tbl_gst_rtn_r7_tax_pay table belong to GSTR-7, never to a GSTR-3B question.
 - GSTR-7 "TDS deducted / withheld / collected" = SUM(iamt + camt + samt). amt_ded is the gross
   pre-TDS payment the TDS was computed ON (the base) — NEVER SUM(amt_ded) for a TDS-amount question.
 - EWB status: 'ACT' = active, 'CNL' = cancelled, 'EXP' = expired. "Cancelled e-way bills" =
