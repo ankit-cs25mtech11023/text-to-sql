@@ -36,6 +36,10 @@ evaluation/results/*.json
 .claude/
 CLAUDE.md
 
+# Claude plugin artifacts (caveman, etc.)
+.agents/
+skills-lock.json
+
 # Local docs (not for repo)
 summary.md
 conversation.pdf

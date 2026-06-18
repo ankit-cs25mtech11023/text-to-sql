@@ -464,6 +464,12 @@ python evaluation/benchmark.py --model xiyansql --output evaluation/results/
 
 ## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
 
+> **Authoritative detailed plan: [`RAG_plan.md`](RAG_plan.md)** — complete Phase 5-B execution spec
+> (disjoint-pool methodology + leakage control, stratified dataset spec, subclass component design,
+> incremental eval order, risks, verification). Phase 5 is **done** (baseline EX 90.2% on `main`);
+> branch `rag-enhancement` is created and active. The sections below are the original design notes,
+> now superseded in detail by `RAG_plan.md`.
+
 **When:** After Phase 5 is complete on `main`. Create a new branch:
 ```bash
 git checkout -b rag-enhancement
