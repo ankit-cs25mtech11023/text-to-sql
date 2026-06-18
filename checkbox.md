@@ -73,17 +73,51 @@
 
 ## Phase 5-B: RAG Enhancement (Branch: `rag-enhancement`)
 
-> Start after Phase 5 is complete on `main`. Run: `git checkout -b rag-enhancement`
+> Branch `rag-enhancement` active. Authoritative spec: `RAG_plan.md`. Order = intrinsic-first
+> (CPU variant selection), then cheap extrinsic signal, then 2×2 + ablations.
 
-- [ ] `core/schema_indexer.py` — M-Schema builder + FAISS index (one vector per table)
-- [ ] `core/rag_retriever.py` — dual FAISS retrieval (top-K tables + top-K Q-SQL pairs)
-- [ ] `evaluation/rag_qsql_store.json` — 50–100 GST-specific Q-SQL pairs
-- [ ] `index/` — FAISS index files (gitignored, built by schema_indexer.py)
-- [ ] Update `core/prompt_builder.py` — add `RAGPromptBuilder` subclass
-- [ ] Update `core/pipeline.py` — add `RAGTextToSQLPipeline` subclass
-- [x] Update `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
-- [ ] RAG ablation experiments (Schema RAG only / Few-shot RAG only / Both / Top-K sweep)
-- [ ] Verification: RAG pipeline retrieves correct tables for test questions
+### Part A — Disjoint retrieval pool (`RAG_plan.md` §4)
+- [x] Probe `gst_official` for verified columns + categorical values (decode tables, EWB/3B/GSTR-7 cols, value ranges)
+- [x] Read source-of-truth files (descriptions_official.json, 3 DDLs, config/prompts.py 5 few-shots, 112 eval set)
+- [x] `evaluation/rag_qsql_store.json` — **140 pairs authored** (IDs 1001–1140), stratified per §4.1 (decode 15, ranking 20, domain 24, agg 22, grouping 16, join 12, filtering 10, quirk 8, subquery 8, having 5; modules 3B 54 / EWB 45 / R7 41)
+- [x] Verify every gold_sql executes on `gst_official` — **0 failures** (no error / empty / NULL); ids unique; 0 exact-dup vs eval
+- [ ] **Leakage audit** (§2 mandatory): embed pool+eval, flag cosine > 0.90, save report → `evaluation/results/leakage_audit.csv`
+
+### Part B — Deps + components (`RAG_plan.md` §5)
+- [ ] Install deps: `sentence-transformers`, `faiss-cpu`, `rank_bm25`; update `requirements.txt`; gitignore `index/`
+- [ ] `config/settings.py` — RAG fields (embed_model, top_k, retrieval_mode, hybrid/category weights, seed, trace_path, always_core)
+- [ ] `core/rag_retriever.py` — qsql FAISS; **semantic + hybrid (BM25+RRF)** + optional category rerank (predicted, not oracle); deterministic
+- [ ] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side)
+- [ ] `config/prompts.py` — factor shared header out; add `RAG_SYSTEM_PROMPT_TEMPLATE` (placeholders: retrieved_schema, retrieved_fewshots)
+- [ ] `core/prompt_builder.py` — `RAGPromptBuilder` subclass (per-question build_messages)
+- [ ] `core/pipeline.py` — `RAGTextToSQLPipeline` subclass (`__init__` only; `ask()` inherited)
+- [ ] `evaluation/benchmark.py` — `--rag` + `--rag-mode {fewshot,schema,both}`; **trace JSONL (#10) + efficiency metrics (#9)** built in
+- [ ] `evaluation/intrinsic_eval.py` — CPU-only recall@k / same-category hit / leakage / prompt-tokens (Layer-1, §3.5)
+- [x] `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
+
+### Layer 1 — Intrinsic retrieval study (CPU, no HPC) (`RAG_plan.md` §3.5)
+- [ ] Embed-model compare: `bge-large` vs `bge-m3` (#1) — recall@k / same-category hit
+- [ ] Semantic vs hybrid (BM25+RRF, #2)
+- [ ] Category-aware rerank: predicted vs oracle (#7)
+- [ ] Pick winning retriever config → record `evaluation/results/intrinsic_*.csv`
+
+### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
+- [ ] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
+- [ ] Few-shot RAG only (winning retriever): `--rag-mode fewshot --runs 3` → `rag_fewshot.csv`; compare vs baseline
+- [ ] Schema-retrieval only: `--rag-mode schema --runs 3` (2×2 cell, real run #12)
+- [ ] Full RAG: `--rag-mode both --runs 3` → `rag.csv` (headline)
+- [ ] Always-core on/off ablation (#6): rerun winning mode with `rag_always_include_core_tables` toggled
+- [ ] **2×2 table** (Baseline / Schema-only / Few-shot-only / Full RAG) — EX/VER + by-category + by-difficulty + prompt-tokens
+- [ ] Reframe hypotheses as tested (#14) — done in RAG_plan; reflect in results narrative
+
+### Verification (`RAG_plan.md` §8)
+- [ ] Retrieval sanity: decode Q → decode-join demos + 3B/`common.mst_*` tables; GSTR-7 Q → r7 tables (spot-check 3–4)
+- [ ] Leakage audit passes (report saved)
+- [ ] Base untouched: `git diff main -- core/pipeline.py core/prompt_builder.py core/sql_generator.py` = additions only
+- [ ] Trace spot-check: a fixed residual (decode Q) shows a decode-join demo in `rag_traces.jsonl`
+
+### Deferred (if time) (`RAG_plan.md` §9 "Deferred items")
+- [ ] #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep
 
 ## Phase 6: Production Hardening (post-thesis green light)
 
