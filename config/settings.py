@@ -22,6 +22,26 @@ class Settings(BaseSettings):
 
     few_shot_examples: int = 0  # 0 = zero-shot; set to 3 or 5 for ablation
 
+    # ── Phase 5-B: RAG (retrieval-augmented). Baseline ignores all of these. ──
+    embed_model: str = "BAAI/bge-large-en-v1.5"   # challenger: BAAI/bge-m3 (intrinsic compare)
+    rag_top_k_tables: int = 5
+    rag_top_k_fewshots: int = 3
+    rag_index_dir: str = "index"
+    qsql_store_path: str = "evaluation/rag_qsql_store.json"
+    rag_always_include_core_tables: bool = True   # ablation toggle, not an assumption
+    rag_retrieval_mode: str = "semantic"          # "semantic" | "hybrid" (BM25+RRF)
+    rag_hybrid_dense_weight: float = 0.6          # used only if weighted fusion (vs RRF)
+    rag_category_weight: float = 0.0              # >0 enables predicted-category rerank
+    rag_embed_seed: int = 0                        # determinism
+    rag_trace_path: str = "evaluation/results/rag_traces.jsonl"
+
+    @field_validator("rag_retrieval_mode")
+    @classmethod
+    def validate_retrieval_mode(cls, v: str) -> str:
+        if v not in {"semantic", "hybrid"}:
+            raise ValueError("rag_retrieval_mode must be 'semantic' or 'hybrid'")
+        return v
+
     @field_validator("default_provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:
