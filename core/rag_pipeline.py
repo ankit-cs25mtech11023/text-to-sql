@@ -1,0 +1,49 @@
+"""RAGTextToSQLPipeline — Phase 5-B drop-in extension of TextToSQLPipeline.
+
+In its own file so core/pipeline.py stays byte-identical to main. Overrides only
+__init__ (wires RAGRetriever + RAGPromptBuilder); ask() is inherited verbatim, so
+validation / execution / self-correction are reused unchanged.
+"""
+
+from __future__ import annotations
+
+from sqlalchemy import Engine
+
+from config.settings import Settings
+from core.llm_client import make_client
+from core.pipeline import TextToSQLPipeline
+from core.rag_prompt_builder import RAGPromptBuilder
+from core.rag_retriever import RAGRetriever
+from core.schema_extractor import SchemaExtractor
+from core.sql_generator import SQLGenerator
+from database.connection import get_engine
+
+
+class RAGTextToSQLPipeline(TextToSQLPipeline):
+    def __init__(
+        self,
+        settings: Settings,
+        rag_mode: str = "both",
+        retriever: RAGRetriever | None = None,
+    ) -> None:
+        self._settings = settings
+        self._engine: Engine = get_engine(
+            settings.database_url,
+            read_only=True,
+            statement_timeout_seconds=settings.query_timeout_seconds,
+        )
+        extractor = SchemaExtractor(self._engine, settings.descriptions_path)
+        ctx = extractor.get_full_context()
+        self._allowed_tables: set[str] = extractor.get_allowed_table_names()
+
+        # retriever may be passed in so the embed model loads once across pipelines.
+        self._retriever = retriever or RAGRetriever(settings)
+        self._rag_mode = rag_mode
+        builder = RAGPromptBuilder(ctx, self._retriever, settings, mode=rag_mode)
+        llm = make_client(
+            provider=settings.default_provider,
+            model=settings.default_model,
+            base_url=settings.vllm_base_url,
+            api_key=settings.vllm_api_key,
+        )
+        self._generator = SQLGenerator(llm, builder)

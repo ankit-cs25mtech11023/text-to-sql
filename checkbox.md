@@ -90,10 +90,11 @@
 - [x] `core/rag_retriever.py` — qsql FAISS (IndexFlatIP, question-only embed); **semantic + hybrid (BM25+RRF)** + optional predicted-category rerank; deterministic id tie-break; smoke-tested both modes. `retrieve_tables` stubbed until SchemaIndexer
 - [x] `evaluation/intrinsic_eval.py` — Layer-1 CPU: same-category/module/both hit@k + MRR + latency per config; CSV per config + comparison table
 - [ ] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side)
-- [ ] `config/prompts.py` — factor shared header out; add `RAG_SYSTEM_PROMPT_TEMPLATE` (placeholders: retrieved_schema, retrieved_fewshots)
-- [ ] `core/prompt_builder.py` — `RAGPromptBuilder` subclass (per-question build_messages)
-- [ ] `core/pipeline.py` — `RAGTextToSQLPipeline` subclass (`__init__` only; `ask()` inherited)
-- [ ] `evaluation/benchmark.py` — `--rag` + `--rag-mode {fewshot,schema,both}`; **trace JSONL (#10) + efficiency metrics (#9)** built in
+- [x] `config/rag_prompts.py` (NEW, not editing prompts.py) — `RAG_SYSTEM_PROMPT_TEMPLATE` + `SHARED_HEADER` **derived** from baseline template (sliced, not duplicated) → prompts.py stays byte-identical to main; + fewshot/schema formatters
+- [x] `core/rag_prompt_builder.py` (NEW) — `RAGPromptBuilder` subclass, per-question build_messages; modes fewshot/schema/both (schema/both gated until SchemaIndexer); base prompt_builder.py untouched
+- [x] `core/rag_pipeline.py` (NEW) — `RAGTextToSQLPipeline` subclass (`__init__` only; `ask()` inherited); base pipeline.py untouched
+- [x] `evaluation/benchmark.py` — `--rag` + `--rag-mode {fewshot,schema,both}`; **trace JSONL (#10)** (run-1) + efficiency (#9: retrieval latency, approx prompt tokens) built in
+- [x] **Merge-safety verified:** `git diff main` on pipeline.py/prompt_builder.py/sql_generator.py/prompts.py = EMPTY (all RAG ships as new files + additive settings/benchmark)
 - [ ] `evaluation/intrinsic_eval.py` — CPU-only recall@k / same-category hit / leakage / prompt-tokens (Layer-1, §3.5)
 - [x] `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
 

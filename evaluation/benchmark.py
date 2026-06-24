@@ -38,8 +38,12 @@ FIELDS = [
 ]
 
 
-def _score_once(pipeline, gold_engine, items, limit) -> dict[int, dict]:
-    """One full pass over the gold set -> {id: {ex, ver, em, pred_sql, error}}."""
+def _score_once(pipeline, gold_engine, items, limit, trace_rows=None) -> dict[int, dict]:
+    """One full pass over the gold set -> {id: {ex, ver, em, pred_sql, error}}.
+
+    If trace_rows is a list (RAG run, first pass only), append one retrieval trace
+    per question for the Error Analysis chapter (RAG_plan #10) + efficiency (#9).
+    """
     out: dict[int, dict] = {}
     for it in items:
         res = pipeline.ask(it["question"])
@@ -53,12 +57,45 @@ def _score_once(pipeline, gold_engine, items, limit) -> dict[int, dict]:
             "ex": int(ex), "ver": int(ver), "em": int(exact_match(it["gold_sql"], res.sql)),
             "pred_sql": res.sql, "error": (res.error or "") if not ver else "",
         }
+        if trace_rows is not None:
+            _append_trace(trace_rows, pipeline, it, res, ex, ver)
     return out
 
 
-def run(test_path: str, out_path: str, runs: int) -> None:
+def _append_trace(trace_rows, pipeline, it, res, ex, ver) -> None:
+    import time
+
+    from core.rag_retriever import _predict_category
+
+    t0 = time.perf_counter()
+    retr = pipeline._retriever.retrieve(it["question"])
+    retrieval_ms = (time.perf_counter() - t0) * 1000.0
+    msgs = pipeline._generator._prompt_builder.build_messages(it["question"])
+    prompt_chars = sum(len(m["content"]) for m in msgs)
+    trace_rows.append({
+        "id": it["id"], "module": it["module"], "category": it["category"],
+        "question": it["question"],
+        "predicted_category": _predict_category(it["question"]),
+        "retrieved_tables": retr["tables"],
+        "retrieved_fewshot_ids": [s["id"] for s in retr["fewshots"]],
+        "generated_sql": res.sql, "gold_sql": it["gold_sql"],
+        "exec_rowcount": int(res.data.shape[0]) if (ver and res.data is not None) else 0,
+        "ex": int(ex), "ver": int(ver), "attempts": res.attempts,
+        "retrieval_latency_ms": round(retrieval_ms, 2),
+        "prompt_chars": prompt_chars, "approx_prompt_tokens": prompt_chars // 4,
+        "execution_time_ms": round(res.execution_time_ms, 2),
+    })
+
+
+def run(test_path: str, out_path: str, runs: int, rag: bool = False, rag_mode: str = "both") -> None:
     settings = get_settings()
-    pipeline = TextToSQLPipeline(settings)
+    if rag:
+        from core.rag_pipeline import RAGTextToSQLPipeline  # lazy: keeps baseline startup light
+        pipeline = RAGTextToSQLPipeline(settings, rag_mode=rag_mode)
+        print(f"RAG pipeline: mode={rag_mode}  embed={settings.embed_model}  "
+              f"retrieval={settings.rag_retrieval_mode}")
+    else:
+        pipeline = TextToSQLPipeline(settings)
     gold_engine = get_engine(
         settings.database_url, read_only=True,
         statement_timeout_seconds=settings.query_timeout_seconds,
@@ -68,9 +105,11 @@ def run(test_path: str, out_path: str, runs: int) -> None:
     passes: dict[int, dict[str, int]] = {it["id"]: {"ex": 0, "ver": 0, "em": 0} for it in items}
     last: dict[int, dict] = {}
     per_run_overall: list[dict[str, float]] = []  # overall EX/VER per run, for mean +/- std
+    trace_rows: list[dict] | None = [] if rag else None
 
     for r in range(1, runs + 1):
-        scored = _score_once(pipeline, gold_engine, items, settings.query_result_limit)
+        collect = trace_rows if (rag and r == 1) else None  # traces once, run 1
+        scored = _score_once(pipeline, gold_engine, items, settings.query_result_limit, collect)
         for qid, s in scored.items():
             passes[qid]["ex"] += s["ex"]
             passes[qid]["ver"] += s["ver"]
@@ -101,6 +140,17 @@ def run(test_path: str, out_path: str, runs: int) -> None:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         w.writeheader()
         w.writerows(rows)
+
+    if trace_rows:
+        tp = Path(settings.rag_trace_path)
+        tp.parent.mkdir(parents=True, exist_ok=True)
+        with tp.open("w") as f:
+            for t in trace_rows:
+                f.write(json.dumps(t) + "\n")
+        mean_tok = sum(t["approx_prompt_tokens"] for t in trace_rows) / len(trace_rows)
+        mean_rlat = sum(t["retrieval_latency_ms"] for t in trace_rows) / len(trace_rows)
+        print(f"\nRAG efficiency: mean prompt ~{mean_tok:,.0f} tokens (approx, chars/4)  "
+              f"retrieval {mean_rlat:.0f} ms/q  -> traces {tp}")
 
     _summary(rows, per_run_overall, runs, out_path)
 
@@ -149,8 +199,10 @@ def main() -> None:
     ap.add_argument("--test", default="evaluation/test_questions.json")
     ap.add_argument("--output", default="evaluation/results/baseline.csv")
     ap.add_argument("--runs", type=int, default=1, help="repeat N times, report mean +/- std")
+    ap.add_argument("--rag", action="store_true", help="use the RAG pipeline instead of baseline")
+    ap.add_argument("--rag-mode", default="both", choices=["fewshot", "schema", "both"])
     args = ap.parse_args()
-    run(args.test, args.output, args.runs)
+    run(args.test, args.output, args.runs, rag=args.rag, rag_mode=args.rag_mode)
 
 
 if __name__ == "__main__":

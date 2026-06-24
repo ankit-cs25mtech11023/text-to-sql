@@ -83,6 +83,10 @@ class RAGRetriever:
         self._index.add(emb)
         self._bm25 = BM25Okapi([_tokenize(q) for q in questions])
 
+    @property
+    def has_schema_index(self) -> bool:
+        return self._schema_indexer is not None
+
     def _embed_one(self, question: str) -> np.ndarray:
         return self._model.encode(
             [question], normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False
