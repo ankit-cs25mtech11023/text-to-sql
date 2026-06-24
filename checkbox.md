@@ -85,9 +85,10 @@
 
 ### Part B — Deps + components (`RAG_plan.md` §5)
 - [x] Install deps: CPU-only `torch==2.12.1+cpu` (no GPU on laptop), `sentence-transformers`, `faiss-cpu`, `rank_bm25`; pinned in `requirements.txt`
-- [ ] gitignore `index/`
-- [ ] `config/settings.py` — RAG fields (embed_model, top_k, retrieval_mode, hybrid/category weights, seed, trace_path, always_core)
-- [ ] `core/rag_retriever.py` — qsql FAISS; **semantic + hybrid (BM25+RRF)** + optional category rerank (predicted, not oracle); deterministic
+- [x] gitignore `index/` (+ `results/*.jsonl` for traces)
+- [x] `config/settings.py` — RAG fields (embed_model, top_k, retrieval_mode, hybrid/category weights, seed, trace_path, always_core) + retrieval_mode validator
+- [x] `core/rag_retriever.py` — qsql FAISS (IndexFlatIP, question-only embed); **semantic + hybrid (BM25+RRF)** + optional predicted-category rerank; deterministic id tie-break; smoke-tested both modes. `retrieve_tables` stubbed until SchemaIndexer
+- [x] `evaluation/intrinsic_eval.py` — Layer-1 CPU: same-category/module/both hit@k + MRR + latency per config; CSV per config + comparison table
 - [ ] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side)
 - [ ] `config/prompts.py` — factor shared header out; add `RAG_SYSTEM_PROMPT_TEMPLATE` (placeholders: retrieved_schema, retrieved_fewshots)
 - [ ] `core/prompt_builder.py` — `RAGPromptBuilder` subclass (per-question build_messages)
@@ -97,10 +98,10 @@
 - [x] `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
 
 ### Layer 1 — Intrinsic retrieval study (CPU, no HPC) (`RAG_plan.md` §3.5)
-- [ ] Embed-model compare: `bge-large` vs `bge-m3` (#1) — recall@k / same-category hit
-- [ ] Semantic vs hybrid (BM25+RRF, #2)
+- [~] Embed-model compare: `bge-large` vs `bge-m3` (#1) — **bge-large done**; bge-m3 pending (2GB download)
+- [x] Semantic vs hybrid (BM25+RRF, #2) — on bge-large, **hybrid wins** (same-both hit@3 81.2% vs 79.5%, MRR 0.740 vs 0.708)
 - [ ] Category-aware rerank: predicted vs oracle (#7)
-- [ ] Pick winning retriever config → record `evaluation/results/intrinsic_*.csv`
+- [~] Pick winning retriever config → `intrinsic_*.csv` written; **leading = bge-large hybrid** (confirm vs bge-m3 before locking)
 
 ### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
 - [ ] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
