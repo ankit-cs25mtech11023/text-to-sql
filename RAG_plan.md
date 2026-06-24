@@ -362,10 +362,20 @@ Drives the embed-model (#1) and semantic-vs-hybrid (#2) selection **before** any
 
 | Configuration | Retrieved schema | Few-shot | EX | VER | mean prompt-tokens |
 |---|---|---|---|---|---|
-| Baseline | Full static schema | No | 90.2% | 97.6% | (measured) |
+| Baseline | Full static schema | No | 90.2% | 97.6% | ~20.1k (full schema) |
 | Schema-retrieval only | Retrieved | No | | | |
-| Few-shot only | Full static schema | Yes | | | |
+| Few-shot only | Full static schema | Yes | **94.6%** | **100.0%** | ~20,103 (approx) |
 | Full RAG | Retrieved | Yes | | | |
+
+**Few-shot RAG run (2026-06-25, runs=3, bge-large + retrieval=semantic, k=3):** EX 94.6% ±0.0,
+VER 100% ±0.0. By category: **decode 25%→100% (+75, the headline residual — fixed)**, having
+67→100, ranking 79→93, domain 91→100; fixed 11 of 12 baseline failures; 0 invalid SQL. Net +4.4
+= fixed 11, **regressed 5** (trace-diagnosed): #94/#96/#109 the `amt_ded` name-trap via retrieval
+(nearest pool demos are *base-amount* `SUM(amt_ded)` → model copied the wrong column for "TDS
+deducted" = `iamt+camt+samt`); #107 deductor/deductee grouping; #59 baseline leaned on a static
+few-shot near-twin (RAG's disjoint pool is the more honest number); #62 decode-label-vs-raw fy_flag.
+Regressions are pool-fixable with GENERAL demos (teach the TDS-sum column) + leakage re-audit — next loop.
+Result in `evaluation/results/rag_fewshot.csv`; per-question traces in `rag_traces.jsonl`.
 
 Isolates schema-RAG vs few-shot-RAG contributions instead of conflating them. Each cell also broken
 down **by-category** and **by-difficulty** (confirm `decode`/`ranking` residuals improve).

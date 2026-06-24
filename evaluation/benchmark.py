@@ -23,6 +23,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from tqdm import tqdm
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from config.settings import get_settings
@@ -45,7 +47,7 @@ def _score_once(pipeline, gold_engine, items, limit, trace_rows=None) -> dict[in
     per question for the Error Analysis chapter (RAG_plan #10) + efficiency (#9).
     """
     out: dict[int, dict] = {}
-    for it in items:
+    for it in tqdm(items, desc="scoring", unit="q", leave=False):
         res = pipeline.ask(it["question"])
         gold = execute_sql(it["gold_sql"], gold_engine, limit=limit)
         ver = res.success

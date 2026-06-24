@@ -106,7 +106,7 @@
 
 ### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
 - [ ] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
-- [ ] Few-shot RAG only (winning retriever): `--rag-mode fewshot --runs 3` → `rag_fewshot.csv`; compare vs baseline
+- [x] Few-shot RAG only (bge-large, semantic, k=3): `--rag-mode fewshot --runs 3` → `rag_fewshot.csv`. **EX 90.2%→94.6% (+4.4), VER 97.6%→100%, stable ±0.0.** decode **25%→100%** (headline residual fixed); fixed 11/12 baseline fails; regressed 5 (amt_ded name-trap #94/#96/#109, deductor/deductee #107, static-twin #59, decode-label #62) — trace-diagnosed, pool-fixable next loop
 - [ ] Schema-retrieval only: `--rag-mode schema --runs 3` (2×2 cell, real run #12)
 - [ ] Full RAG: `--rag-mode both --runs 3` → `rag.csv` (headline)
 - [ ] Always-core on/off ablation (#6): rerun winning mode with `rag_always_include_core_tables` toggled
