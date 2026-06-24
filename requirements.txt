@@ -52,6 +52,21 @@ pydeck==0.9.2
 toml==0.10.2
 watchdog==6.0.0
 
+# ── Phase 5-B: RAG (embedding retrieval) ─────────────────────────────────────
+# CPU-only torch (no GPU on dev laptop; LLM inference is on HPC). Install torch
+# FIRST from the CPU index, else sentence-transformers pulls the ~5GB CUDA build:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch==2.12.1+cpu
+sentence-transformers==5.6.0
+faiss-cpu==1.14.3
+rank-bm25==0.2.2
+# deps pulled by sentence-transformers
+transformers==5.12.1
+tokenizers==0.22.2
+safetensors==0.8.0
+scikit-learn==1.9.0
+scipy==1.17.1
+
 # ── Upcoming phases (install when needed) ────────────────────────────────────
 # Phase 5: matplotlib>=3.8, seaborn>=0.13, pytest>=8.0, jupyter>=1.0
-# Phase 6: psycopg2-binary>=2.9, fastapi>=0.111, uvicorn>=0.30, slowapi>=0.1
+# Phase 6: fastapi>=0.111, uvicorn>=0.30, slowapi>=0.1

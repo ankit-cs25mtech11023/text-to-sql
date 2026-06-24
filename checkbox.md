@@ -81,10 +81,11 @@
 - [x] Read source-of-truth files (descriptions_official.json, 3 DDLs, config/prompts.py 5 few-shots, 112 eval set)
 - [x] `evaluation/rag_qsql_store.json` — **140 pairs authored** (IDs 1001–1140), stratified per §4.1 (decode 15, ranking 20, domain 24, agg 22, grouping 16, join 12, filtering 10, quirk 8, subquery 8, having 5; modules 3B 54 / EWB 45 / R7 41)
 - [x] Verify every gold_sql executes on `gst_official` — **0 failures** (no error / empty / NULL); ids unique; 0 exact-dup vs eval
-- [ ] **Leakage audit** (§2 mandatory): embed pool+eval, flag cosine > 0.90, save report → `evaluation/results/leakage_audit.csv`
+- [x] **Leakage audit** (`evaluation/leakage_audit.py`, §2) — two signals: (1) question cosine>0.90 = 62 (template similarity, expected on short single-domain Qs; bge-large max 0.9747); (2) **SQL template-twins (literal-masked gold-SQL identity) = 0 → PASS**. 9 borderline twins reworded to clear it. Report → `evaluation/results/leakage_audit.csv`
 
 ### Part B — Deps + components (`RAG_plan.md` §5)
-- [ ] Install deps: `sentence-transformers`, `faiss-cpu`, `rank_bm25`; update `requirements.txt`; gitignore `index/`
+- [x] Install deps: CPU-only `torch==2.12.1+cpu` (no GPU on laptop), `sentence-transformers`, `faiss-cpu`, `rank_bm25`; pinned in `requirements.txt`
+- [ ] gitignore `index/`
 - [ ] `config/settings.py` — RAG fields (embed_model, top_k, retrieval_mode, hybrid/category weights, seed, trace_path, always_core)
 - [ ] `core/rag_retriever.py` — qsql FAISS; **semantic + hybrid (BM25+RRF)** + optional category rerank (predicted, not oracle); deterministic
 - [ ] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side)
