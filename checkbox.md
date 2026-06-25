@@ -79,7 +79,7 @@
 ### Part A — Disjoint retrieval pool (`RAG_plan.md` §4)
 - [x] Probe `gst_official` for verified columns + categorical values (decode tables, EWB/3B/GSTR-7 cols, value ranges)
 - [x] Read source-of-truth files (descriptions_official.json, 3 DDLs, config/prompts.py 5 few-shots, 112 eval set)
-- [x] `evaluation/rag_qsql_store.json` — **140 pairs authored** (IDs 1001–1140), stratified per §4.1 (decode 15, ranking 20, domain 24, agg 22, grouping 16, join 12, filtering 10, quirk 8, subquery 8, having 5; modules 3B 54 / EWB 45 / R7 41)
+- [x] `evaluation/rag_qsql_store.json` — **142 pairs** (IDs 1001–1142), stratified per §4.1 (decode 15, ranking 20, domain 24, agg 22, grouping 16, join 12, filtering 10, quirk 8, subquery 8, having 5; modules 3B 54 / EWB 45 / R7 43). +2 added 2026-06-25 (#1141 avg-per-deductor, #1142 per-deductor-per-deductee TDS-withheld) to fill the grouped `iamt+camt+samt` coverage hole — GENERAL, not eval-shaped (#94's literal-twin would fail the audit)
 - [x] Verify every gold_sql executes on `gst_official` — **0 failures** (no error / empty / NULL); ids unique; 0 exact-dup vs eval
 - [x] **Leakage audit** (`evaluation/leakage_audit.py`, §2) — two signals: (1) question cosine>0.90 = 62 (template similarity, expected on short single-domain Qs; bge-large max 0.9747); (2) **SQL template-twins (literal-masked gold-SQL identity) = 0 → PASS**. 9 borderline twins reworded to clear it. Report → `evaluation/results/leakage_audit.csv`
 
@@ -99,14 +99,15 @@
 - [x] `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
 
 ### Layer 1 — Intrinsic retrieval study (CPU, no HPC) (`RAG_plan.md` §3.5)
-- [~] Embed-model compare: `bge-large` vs `bge-m3` (#1) — **bge-large done**; bge-m3 pending (2GB download)
-- [x] Semantic vs hybrid (BM25+RRF, #2) — on bge-large, **hybrid wins** (same-both hit@3 81.2% vs 79.5%, MRR 0.740 vs 0.708)
+- [x] Embed-model compare: `bge-large` vs `bge-m3` (#1) — both run (`intrinsic_bge-m3_*.csv`); **~tie → bge-large kept**
+- [x] Semantic vs hybrid (BM25+RRF, #2) — on bge-large, **hybrid wins** (same-both hit@3 81.2% vs 79.5%; @5 91.1% vs 86.6%, MRR 0.770 vs 0.728)
 - [ ] Category-aware rerank: predicted vs oracle (#7)
-- [~] Pick winning retriever config → `intrinsic_*.csv` written; **leading = bge-large hybrid** (confirm vs bge-m3 before locking)
+- [x] Pick winning retriever config → **bge-large + hybrid + k=5** (intrinsic recall, confirmed by Grid-B extrinsic sweep)
 
 ### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
-- [ ] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
-- [x] Few-shot RAG only (bge-large, semantic, k=3): `--rag-mode fewshot --runs 3` → `rag_fewshot.csv`. **EX 90.2%→94.6% (+4.4), VER 97.6%→100%, stable ±0.0.** decode **25%→100%** (headline residual fixed); fixed 11/12 baseline fails; regressed 5 (amt_ded name-trap #94/#96/#109, deductor/deductee #107, static-twin #59, decode-label #62) — trace-diagnosed, pool-fixable next loop
+- [x] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
+- [x] `evaluation/benchmark.py` — added `--retrieval-mode {semantic,hybrid}` + `--rag-top-k N` flags (override settings per run; RAG path only; base files still byte-identical to main)
+- [x] **Few-shot RAG LOCKED (hybrid, k=5, 142-pool): EX 90.2%→97.3% ±0.0, VER 97.6%→100% ±0.0** → `rag_fewshot.csv`. decode **25%→100%**. Got here via: (a) pool fix +0.9 (#109), (b) **Grid-B sweep** {sem,hyb}×{k3,k5} runs=1 screen → k=5 +1.8 (#59,#94); hyb-k3 broke #28 (k5 clean); (c) runs=3 confirm sem-k5 ≡ hyb-k5 bitwise → hybrid on intrinsic+robustness. Residuals **{62,96,107}** = findings (#96 base-vs-withheld per-deductee, #107 grouping-entity+3-table→schema cell, #62 decode-flaky). Sweep CSVs → `results/ablations/`, manifest → `results/README.md`
 - [ ] Schema-retrieval only: `--rag-mode schema --runs 3` (2×2 cell, real run #12)
 - [ ] Full RAG: `--rag-mode both --runs 3` → `rag.csv` (headline)
 - [ ] Always-core on/off ablation (#6): rerun winning mode with `rag_always_include_core_tables` toggled

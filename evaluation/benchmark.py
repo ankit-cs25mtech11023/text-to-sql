@@ -89,13 +89,21 @@ def _append_trace(trace_rows, pipeline, it, res, ex, ver) -> None:
     })
 
 
-def run(test_path: str, out_path: str, runs: int, rag: bool = False, rag_mode: str = "both") -> None:
+def run(test_path: str, out_path: str, runs: int, rag: bool = False, rag_mode: str = "both",
+        retrieval_mode: str | None = None, rag_top_k: int | None = None) -> None:
     settings = get_settings()
     if rag:
+        overrides: dict = {}
+        if retrieval_mode is not None:
+            overrides["rag_retrieval_mode"] = retrieval_mode
+        if rag_top_k is not None:
+            overrides["rag_top_k_fewshots"] = rag_top_k
+        if overrides:
+            settings = settings.model_copy(update=overrides)
         from core.rag_pipeline import RAGTextToSQLPipeline  # lazy: keeps baseline startup light
         pipeline = RAGTextToSQLPipeline(settings, rag_mode=rag_mode)
         print(f"RAG pipeline: mode={rag_mode}  embed={settings.embed_model}  "
-              f"retrieval={settings.rag_retrieval_mode}")
+              f"retrieval={settings.rag_retrieval_mode}  k_fewshots={settings.rag_top_k_fewshots}")
     else:
         pipeline = TextToSQLPipeline(settings)
     gold_engine = get_engine(
@@ -203,8 +211,13 @@ def main() -> None:
     ap.add_argument("--runs", type=int, default=1, help="repeat N times, report mean +/- std")
     ap.add_argument("--rag", action="store_true", help="use the RAG pipeline instead of baseline")
     ap.add_argument("--rag-mode", default="both", choices=["fewshot", "schema", "both"])
+    ap.add_argument("--retrieval-mode", default=None, choices=["semantic", "hybrid"],
+                    help="override settings.rag_retrieval_mode for this run (RAG only)")
+    ap.add_argument("--rag-top-k", type=int, default=None,
+                    help="override settings.rag_top_k_fewshots for this run (RAG only)")
     args = ap.parse_args()
-    run(args.test, args.output, args.runs, rag=args.rag, rag_mode=args.rag_mode)
+    run(args.test, args.output, args.runs, rag=args.rag, rag_mode=args.rag_mode,
+        retrieval_mode=args.retrieval_mode, rag_top_k=args.rag_top_k)
 
 
 if __name__ == "__main__":

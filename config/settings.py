@@ -25,11 +25,11 @@ class Settings(BaseSettings):
     # ── Phase 5-B: RAG (retrieval-augmented). Baseline ignores all of these. ──
     embed_model: str = "BAAI/bge-large-en-v1.5"   # challenger: BAAI/bge-m3 (intrinsic compare)
     rag_top_k_tables: int = 5
-    rag_top_k_fewshots: int = 3
+    rag_top_k_fewshots: int = 5     # locked via Grid-B sweep (k=5 > k=3; fixed #59/#94/#109)
     rag_index_dir: str = "index"
     qsql_store_path: str = "evaluation/rag_qsql_store.json"
     rag_always_include_core_tables: bool = True   # ablation toggle, not an assumption
-    rag_retrieval_mode: str = "semantic"          # "semantic" | "hybrid" (BM25+RRF)
+    rag_retrieval_mode: str = "hybrid"            # locked: "semantic" | "hybrid" (BM25+RRF); hybrid on intrinsic+robustness (ties sem on eval)
     rag_hybrid_dense_weight: float = 0.6          # used only if weighted fusion (vs RRF)
     rag_category_weight: float = 0.0              # >0 enables predicted-category rerank
     rag_embed_seed: int = 0                        # determinism
