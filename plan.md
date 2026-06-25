@@ -711,7 +711,7 @@ print('Shots:', [s['question'] for s in shots])
 | 7 | Phase 2 prompt-hardening `[DONE]` | Diagnostic-driven general prompt+description fixes (routing, aggregation grain, amount-column semantics); EX 11/16→15/16 on 16-Q probe; residual name-collision documents RAG/few-shot motivation | `main` |
 | 7 | Phase 5 `[DONE]` | 112-pair gold set + full baseline (runs=3) on XiYanSQL-7B → EX 90.2% ±0.0; failures triaged, general (non-overfit) fixes applied, residuals scoped as RAG targets | `main` |
 | Next | Phase 1 (redo) | 4th schema from guide | `main` |
-| **Now** | Phase 5-B | RAG branch: FAISS index, retriever, RAG pipeline + RAG eval — motivated by the decode-join resistance (static-prompt ceiling) | `rag-enhancement` |
+| **Now** | Phase 5-B `[DONE]` | RAG branch complete: FAISS schema+few-shot retrieval, RAG pipeline, full Grid-A (2×2). **Full RAG EX 98.2% (vs 90.2% baseline) at ~57% fewer tokens; decode 25%→100%.** Schema-alone hurts; few-shot is the workhorse; schema pays off only with few-shots | `rag-enhancement` |
 | TBD | Ablations | All deferred ablation studies | `main` / `rag-enhancement` |
 | TBD | Phase 6 | FastAPI + security hardening (when green light) | `main` (merge) |
 

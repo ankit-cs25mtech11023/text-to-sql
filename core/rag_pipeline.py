@@ -36,8 +36,16 @@ class RAGTextToSQLPipeline(TextToSQLPipeline):
         ctx = extractor.get_full_context()
         self._allowed_tables: set[str] = extractor.get_allowed_table_names()
 
+        # schema-table retrieval is built only for modes that use it (schema/both);
+        # fewshot mode keeps the full static schema, so no schema index is needed.
+        schema_indexer = None
+        if rag_mode in {"schema", "both"}:
+            from core.schema_indexer import SchemaIndexer
+
+            schema_indexer = SchemaIndexer(extractor, settings)
+            schema_indexer.load_or_build()
         # retriever may be passed in so the embed model loads once across pipelines.
-        self._retriever = retriever or RAGRetriever(settings)
+        self._retriever = retriever or RAGRetriever(settings, schema_indexer=schema_indexer)
         self._rag_mode = rag_mode
         builder = RAGPromptBuilder(ctx, self._retriever, settings, mode=rag_mode)
         llm = make_client(

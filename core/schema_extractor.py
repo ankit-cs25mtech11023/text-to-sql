@@ -126,6 +126,46 @@ class SchemaExtractor:
                 lines.append("")
         return "\n".join(lines)
 
+    def get_table_blocks(self) -> dict[str, str]:
+        """One M-Schema text block per table (qualified name -> block) for schema
+        retrieval (Phase 5-B). Reuses the same column/FK/description logic as
+        get_ddl; LLM-HIDE columns (absent from descriptions) are excluded."""
+        blocks: dict[str, str] = {}
+        for qualified, schema, table in self._tables:
+            meta = self._descriptions[qualified]
+            desc_cols = meta.get("columns", {})
+            try:
+                cols = self._inspector.get_columns(table, schema=schema)
+                fks = self._inspector.get_foreign_keys(table, schema=schema)
+            except Exception:
+                continue
+            fk_map = {
+                fk["constrained_columns"][0]: fk
+                for fk in fks
+                if fk["constrained_columns"]
+            }
+            header = f"Table: {qualified}"
+            tdesc = meta.get("table_description", "")
+            if tdesc:
+                header += f" — {tdesc}"
+            lines = [header]
+            for col in cols:
+                name = col["name"]
+                if name not in desc_cols:
+                    continue
+                note = desc_cols.get(name, "")
+                if name in fk_map:
+                    fk = fk_map[name]
+                    ref_schema = fk.get("referred_schema") or "public"
+                    ref = f"{ref_schema}.{fk['referred_table']}.{fk['referred_columns'][0]}"
+                    note = f"{note} (FK -> {ref})" if note else f"FK -> {ref}"
+                line = f"  {self._quote_ident(name)} ({col['type']})"
+                if note:
+                    line += f" -- {note}"
+                lines.append(line)
+            blocks[qualified] = "\n".join(lines)
+        return blocks
+
     def get_full_context(self) -> dict[str, str]:
         return {
             "ddl": self.get_ddl(),

@@ -363,9 +363,34 @@ Drives the embed-model (#1) and semantic-vs-hybrid (#2) selection **before** any
 | Configuration | Retrieved schema | Few-shot | EX | VER | mean prompt-tokens |
 |---|---|---|---|---|---|
 | Baseline | Full static schema | No | 90.2% | 97.6% | ~20.1k (full schema) |
-| Schema-retrieval only | Retrieved | No | | | |
-| Few-shot only (hybrid, k=5) | Full static schema | Yes | **97.3%** | **100.0%** | ~20,200 (approx) |
-| Full RAG | Retrieved | Yes | | | |
+| Schema-retrieval only | Retrieved (k5+core) | No | 86.6% | 97.3% | ~8.6k |
+| Few-shot only (hybrid, k=5) | Full static schema | Yes | **97.3%** | **100.0%** | ~20.2k |
+| **Full RAG (headline)** | Retrieved (k5+core) | Yes | **98.2%** | **100.0%** | **~8.8k** |
+
+**Grid-A complete (2026-06-26, runs=3 each cell, bge-large+hybrid+k5+always-core).** Headline
+**Full RAG EX 98.2% ±0.0, VER 100%** (`rag.csv`), beating both baseline (+8.0) and few-shot-only
+(+0.9) **at ~57% fewer prompt tokens** (~8.8k vs ~20.1k). Key findings:
+1. **Schema-retrieval alone *hurts*** (86.6% < 90.2% baseline): retrieval drops a needed table on
+   ~6 questions the full static dump always covered ({4,65,67,88,94,108} new fails). Schema
+   retrieval is not free — alone it trades coverage for tokens and loses.
+2. **Few-shot is the workhorse** (+7.1): fixes decode (25%→100%), ranking, domain traps.
+3. **Retrieved schema is net-negative alone but net-positive *on top of* few-shots** (+0.9, fixes
+   #96 base-vs-withheld per-deductee) while cutting tokens — few-shots carry the column/pattern
+   knowledge, the tighter schema removes 21-table distraction.
+4. **Decode** confirms the intrinsic prediction: schema-only decode = 25% (the `fy_flag` block note
+   is *not* enough without a worked example); few-shot/full-RAG decode = 100%.
+5. **Always-core ablation (#6, `rag_both_coreoff.csv`):** core OFF is **EX-neutral** (98.2%, same
+   fails {62,107}) at **~6.1k tokens** — few-shots compensate for dropped MAIN tables. Kept ON as
+   the robust default (intrinsic coverage ON>OFF + unseen-query guard), core-OFF reported as a
+   token-cheaper option.
+
+**Residuals at full RAG {62, 107}:** #62 grouping/3B decode-label (baseline-flaky), #107 GSTR-7
+grouping-entity + 3-table join (resists even full RAG — a genuine hard residual).
+
+**Schema-side intrinsic (Layer-1, `intrinsic_schema_*.csv`):** gold-table-coverage over the 112,
+swept k×always-core. Winner **k5+core-on: table-recall 98.2%, full-coverage 96.4%, decode-coverage
+20%, mean 6.7 tables** (vs 21 static). always-core ON > OFF on coverage at every k (justifies the
+default on coverage grounds even though EX is core-neutral).
 
 **Few-shot RAG LOCKED (2026-06-25, runs=3, bge-large + hybrid + k=5, 142-pool): EX 97.3% ±0.0,
 VER 100% ±0.0.** decode **25%→100%** (headline residual fixed). Residuals **{62, 96, 107}** (0/3

@@ -102,8 +102,14 @@ def run(test_path: str, out_path: str, runs: int, rag: bool = False, rag_mode: s
             settings = settings.model_copy(update=overrides)
         from core.rag_pipeline import RAGTextToSQLPipeline  # lazy: keeps baseline startup light
         pipeline = RAGTextToSQLPipeline(settings, rag_mode=rag_mode)
-        print(f"RAG pipeline: mode={rag_mode}  embed={settings.embed_model}  "
-              f"retrieval={settings.rag_retrieval_mode}  k_fewshots={settings.rag_top_k_fewshots}")
+        uses_schema = rag_mode in {"schema", "both"}
+        uses_fewshot = rag_mode in {"fewshot", "both"}
+        knobs = f"retrieval={settings.rag_retrieval_mode}"
+        if uses_schema:
+            knobs += f"  k_tables={settings.rag_top_k_tables}  always_core={settings.rag_always_include_core_tables}"
+        if uses_fewshot:
+            knobs += f"  k_fewshots={settings.rag_top_k_fewshots}"
+        print(f"RAG pipeline: mode={rag_mode}  embed={settings.embed_model}  {knobs}")
     else:
         pipeline = TextToSQLPipeline(settings)
     gold_engine = get_engine(

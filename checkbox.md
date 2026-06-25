@@ -89,36 +89,37 @@
 - [x] `config/settings.py` — RAG fields (embed_model, top_k, retrieval_mode, hybrid/category weights, seed, trace_path, always_core) + retrieval_mode validator
 - [x] `core/rag_retriever.py` — qsql FAISS (IndexFlatIP, question-only embed); **semantic + hybrid (BM25+RRF)** + optional predicted-category rerank; deterministic id tie-break; smoke-tested both modes. `retrieve_tables` stubbed until SchemaIndexer
 - [x] `evaluation/intrinsic_eval.py` — Layer-1 CPU: same-category/module/both hit@k + MRR + latency per config; CSV per config + comparison table
-- [ ] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side)
+- [x] `core/schema_indexer.py` — `SchemaExtractor.get_table_blocks()` → M-Schema per table → FAISS (schema side); deterministic IndexFlatIP, always-core injects 3 MAIN tables; tested end-to-end (both `schema`/`both` modes assemble + run through vLLM, valid SQL)
 - [x] `config/rag_prompts.py` (NEW, not editing prompts.py) — `RAG_SYSTEM_PROMPT_TEMPLATE` + `SHARED_HEADER` **derived** from baseline template (sliced, not duplicated) → prompts.py stays byte-identical to main; + fewshot/schema formatters
 - [x] `core/rag_prompt_builder.py` (NEW) — `RAGPromptBuilder` subclass, per-question build_messages; modes fewshot/schema/both (schema/both gated until SchemaIndexer); base prompt_builder.py untouched
 - [x] `core/rag_pipeline.py` (NEW) — `RAGTextToSQLPipeline` subclass (`__init__` only; `ask()` inherited); base pipeline.py untouched
 - [x] `evaluation/benchmark.py` — `--rag` + `--rag-mode {fewshot,schema,both}`; **trace JSONL (#10)** (run-1) + efficiency (#9: retrieval latency, approx prompt tokens) built in
 - [x] **Merge-safety verified:** `git diff main` on pipeline.py/prompt_builder.py/sql_generator.py/prompts.py = EMPTY (all RAG ships as new files + additive settings/benchmark)
-- [ ] `evaluation/intrinsic_eval.py` — CPU-only recall@k / same-category hit / leakage / prompt-tokens (Layer-1, §3.5)
+- [x] `evaluation/intrinsic_eval.py` — CPU-only recall@k / same-category hit / leakage / prompt-tokens (Layer-1, §3.5) — few-shot side
+- [x] `evaluation/intrinsic_schema_eval.py` (NEW) — Layer-1 SCHEMA side: gold-table-coverage recall@k / full-coverage@k / decode-coverage, swept k×always-core → `intrinsic_schema_*.csv`. **k5+core-on: table-recall 98.2%, full-cover 96.4%, decode-cover 20%** (decode tables rank below top-k — documented weak spot); always-core ON > OFF on coverage
 - [x] `core/llm_client.py` — vLLM/OpenAI client (done in Phase 2 — now the only client)
 
 ### Layer 1 — Intrinsic retrieval study (CPU, no HPC) (`RAG_plan.md` §3.5)
 - [x] Embed-model compare: `bge-large` vs `bge-m3` (#1) — both run (`intrinsic_bge-m3_*.csv`); **~tie → bge-large kept**
 - [x] Semantic vs hybrid (BM25+RRF, #2) — on bge-large, **hybrid wins** (same-both hit@3 81.2% vs 79.5%; @5 91.1% vs 86.6%, MRR 0.770 vs 0.728)
-- [ ] Category-aware rerank: predicted vs oracle (#7)
+- [ ] Category-aware rerank: predicted vs oracle (#7) — *deferred (secondary)*; code exists (`rag_category_weight=0` off), study not run. Full RAG already at 98.2% without it.
 - [x] Pick winning retriever config → **bge-large + hybrid + k=5** (intrinsic recall, confirmed by Grid-B extrinsic sweep)
 
 ### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
 - [x] Health-check tunnel (`curl -m5 localhost:8765/v1/models`) before any benchmark run
 - [x] `evaluation/benchmark.py` — added `--retrieval-mode {semantic,hybrid}` + `--rag-top-k N` flags (override settings per run; RAG path only; base files still byte-identical to main)
 - [x] **Few-shot RAG LOCKED (hybrid, k=5, 142-pool): EX 90.2%→97.3% ±0.0, VER 97.6%→100% ±0.0** → `rag_fewshot.csv`. decode **25%→100%**. Got here via: (a) pool fix +0.9 (#109), (b) **Grid-B sweep** {sem,hyb}×{k3,k5} runs=1 screen → k=5 +1.8 (#59,#94); hyb-k3 broke #28 (k5 clean); (c) runs=3 confirm sem-k5 ≡ hyb-k5 bitwise → hybrid on intrinsic+robustness. Residuals **{62,96,107}** = findings (#96 base-vs-withheld per-deductee, #107 grouping-entity+3-table→schema cell, #62 decode-flaky). Sweep CSVs → `results/ablations/`, manifest → `results/README.md`
-- [ ] Schema-retrieval only: `--rag-mode schema --runs 3` (2×2 cell, real run #12)
-- [ ] Full RAG: `--rag-mode both --runs 3` → `rag.csv` (headline)
-- [ ] Always-core on/off ablation (#6): rerun winning mode with `rag_always_include_core_tables` toggled
-- [ ] **2×2 table** (Baseline / Schema-only / Few-shot-only / Full RAG) — EX/VER + by-category + by-difficulty + prompt-tokens
-- [ ] Reframe hypotheses as tested (#14) — done in RAG_plan; reflect in results narrative
+- [x] Schema-retrieval only: `--rag-mode schema --runs 3` → `rag_schema.csv` — **EX 86.6% ±0.0, VER 97.3%** (BELOW baseline 90.2%; retrieval drops needed tables → 6 new fails; decode stuck 25%). Clean finding: schema retrieval alone is net-negative.
+- [x] Full RAG: `--rag-mode both --runs 3` → `rag.csv` (headline) — **EX 98.2% ±0.0, VER 100%**; fails {62,107}; ~8.8k tok (vs ~20.1k baseline). decode 25%→100%. Beats few-shot-only (97.3%, fixes #96).
+- [x] Always-core on/off ablation (#6): `rag_both_coreoff.csv` — **EX-neutral** (98.2%, same fails {62,107}) at **~6.1k tok** vs ~8.8k. Few-shots compensate for dropped MAIN tables; core kept ON as robust default (intrinsic coverage + unseen-query guard).
+- [x] **2×2 table** (Baseline 90.2 / Schema-only 86.6 / Few-shot-only 97.3 / Full RAG 98.2) — EX/VER + by-category + by-difficulty + prompt-tokens, in `results/README.md`
+- [x] Reframe hypotheses as tested (#14) — done in RAG_plan; reflected in results narrative (schema-retrieval-alone hurts; few-shot is workhorse; schema pays off only with few-shots)
 
 ### Verification (`RAG_plan.md` §8)
-- [ ] Retrieval sanity: decode Q → decode-join demos + 3B/`common.mst_*` tables; GSTR-7 Q → r7 tables (spot-check 3–4)
-- [ ] Leakage audit passes (report saved)
-- [ ] Base untouched: `git diff main -- core/pipeline.py core/prompt_builder.py core/sql_generator.py` = additions only
-- [ ] Trace spot-check: a fixed residual (decode Q) shows a decode-join demo in `rag_traces.jsonl`
+- [x] Retrieval sanity: decode Q → decode few-shots (pool 1001–1015) + r3b table; GSTR-7 Q → r7 tables; cancelled → EWB+canceldet (spot-checked schema + few-shot sides)
+- [x] Leakage audit passes (report saved → `leakage_audit.csv`, 0 SQL template-twins)
+- [x] Base untouched: `git diff main` on pipeline/prompt_builder/sql_generator/prompts = EMPTY; `schema_extractor.py` = +40 additive lines (`get_table_blocks`, used only by SchemaIndexer)
+- [x] Trace spot-check: decode eval ids {71,73,74,78} all retrieve decode pool demos (1001–1015) and pass EX in few-shot/full-RAG traces
 
 ### Deferred (if time) (`RAG_plan.md` §9 "Deferred items")
 - [ ] #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep

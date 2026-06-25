@@ -73,7 +73,9 @@ class RAGRetriever:
         np.random.seed(settings.rag_embed_seed)
 
         self._pool: list[dict] = json.loads(Path(settings.qsql_store_path).read_text())
-        self._model = SentenceTransformer(settings.embed_model)
+        # reuse the SchemaIndexer's embed model when present so bge-large loads only once.
+        existing = getattr(schema_indexer, "model", None)
+        self._model = existing or SentenceTransformer(settings.embed_model)
 
         questions = [p["question"] for p in self._pool]
         emb = self._model.encode(
