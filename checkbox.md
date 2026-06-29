@@ -102,7 +102,7 @@
 ### Layer 1 — Intrinsic retrieval study (CPU, no HPC) (`RAG_plan.md` §3.5)
 - [x] Embed-model compare: `bge-large` vs `bge-m3` (#1) — both run (`intrinsic_bge-m3_*.csv`); **~tie → bge-large kept**
 - [x] Semantic vs hybrid (BM25+RRF, #2) — on bge-large, **hybrid wins** (same-both hit@3 81.2% vs 79.5%; @5 91.1% vs 86.6%, MRR 0.770 vs 0.728)
-- [ ] Category-aware rerank: predicted vs oracle (#7) — *deferred (secondary)*; code exists (`rag_category_weight=0` off), study not run. Full RAG already at 98.2% without it.
+- [ ] Category-aware rerank: predicted vs oracle (#7) — **PARKED (2026-06-29)**; code exists (`rag_category_weight=0` off), study not run. Full RAG already at 98.2% without it; won't fix residuals {62,107}.
 - [x] Pick winning retriever config → **bge-large + hybrid + k=5** (intrinsic recall, confirmed by Grid-B extrinsic sweep)
 
 ### Layer 2 — Extrinsic EX (HPC + tunnel) (`RAG_plan.md` §6, §9)
@@ -121,8 +121,11 @@
 - [x] Base untouched: `git diff main` on pipeline/prompt_builder/sql_generator/prompts = EMPTY; `schema_extractor.py` = +40 additive lines (`get_table_blocks`, used only by SchemaIndexer)
 - [x] Trace spot-check: decode eval ids {71,73,74,78} all retrieve decode pool demos (1001–1015) and pass EX in few-shot/full-RAG traces
 
-### Deferred (if time) (`RAG_plan.md` §9 "Deferred items")
-- [ ] #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep
+### Deferred (if time) (`RAG_plan.md` §9 "Deferred items") — **PARKED (2026-06-29)**
+> Assessed as unlikely to move EX past the locked 98.2% (residuals {62,107} = a flaky decode-label +
+> one hard 3-table join; no retrieval knob fixes those). Kept as optional "confirms-the-choice"
+> footnotes, not result-movers. Resume only if residuals become a priority or a reviewer asks.
+- [ ] *(parked)* #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep · hybrid table-retrieval
 
 ## Phase 6: Production Hardening (post-thesis green light)
 

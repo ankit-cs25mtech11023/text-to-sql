@@ -612,11 +612,21 @@ The specialized Text-to-SQL model recommended by the guide, `XGenerationLab/XiYa
 
 **Primary thesis comparison:** `baseline.csv` vs `rag.csv` — does RAG improve accuracy on GST domain?
 
-**Deferred RAG ablations (resume when ready):**
-- Schema RAG only vs Few-shot RAG only vs Both
-- Top-K=3 vs Top-K=5 retrieved tables
-- Q-SQL store size: 10 vs 25 vs 50 pairs
-- RAG + additional local SQL model vs RAG + XiYanSQL-7B (if a second model is served)
+**Deferred RAG ablations — PARKED (2026-06-29).** Schema-only / few-shot-only / both and the
+few-shot top-K (Grid-B k3/k5) are **done** (2×2 in `results/README.md`). The remaining ablations are
+deliberately **parked**, not abandoned: assessed as **unlikely to move EX past the locked 98.2%**, so
+they would enter the thesis only as "we also checked X, confirms the design choice" footnotes — not as
+result-movers. Resume only if the residuals {62,107} become a priority or a reviewer asks. Rationale
+per item below; full list in `RAG_plan.md` §9 "Deferred items".
+- Category-aware rerank, predicted-vs-oracle (#7) — few-shot already retrieves good same-pattern demos;
+  won't fix flaky #62 or the 3-table #107. Code exists (`rag_category_weight=0`, off).
+- Pool-size sweep (20/50/100/142, #13) — a *reduction*/saturation study; by design can't *raise* EX
+  (best case = unchanged). Robustness story, not accuracy.
+- Top-K table sweep (k=3 vs 5) + hybrid table-retrieval — improve table coverage (decode-cover 20%),
+  but decode is already **100% EX** via few-shots → no headroom to convert into EX.
+- Cross-encoder reranker (#4) / dynamic-k (#5) — overkill on the 142-pair hand-curated pool; dynamic-k
+  also hurts retrieval reproducibility.
+- RAG + a 2nd local SQL model — comparison breadth, not this model's EX; gated on serving a 2nd model.
 
 ---
 
