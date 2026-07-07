@@ -127,6 +127,33 @@
 > footnotes, not result-movers. Resume only if residuals become a priority or a reviewer asks.
 - [ ] *(parked)* #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep · hybrid table-retrieval
 
+## Phase 6-DEPLOY: IITH Portainer/H100 box (IN PROGRESS, 2026-07-07)
+
+> Advisor-requested deploy on lab GPU server (**replaces** borrowed SLURM HPC). Access =
+> Portainer web only (no SSH); shared container `iit-hyderabad`, 1× H100 NVL 95.8 GB,
+> driver 575/CUDA 12.9. Our dir `/workspace/IITH_GST/Subbareddy/ankit-text2sql`.
+> Full steps in `deploy_runbook.md` (local, gitignored). **BLOCKER: GPU oversubscribed
+> (~91/96 GB used by mayank's 27B + giridhar's app) → serving gated on a VRAM window.**
+
+### Done this session
+- [x] Merge `rag-enhancement` → `main` (fast-forward, 0 conflicts; base files byte-identical, RAG additive/opt-in), pushed → `origin/main`
+- [x] Version `evaluation/results/` as proof-of-work snapshot (baseline 90.2% / Full RAG 98.2%, CSVs + README + jsonl traces ~11 MB) — tied to code commit, non-reproducible after 4th schema
+- [x] Pin thesis-figure deps (matplotlib/seaborn/pptx) in requirements.txt; gitignore local thesis docs (`report/`, `thesis_*.md`, `deploy_runbook.md`)
+- [x] `deploy_runbook.md` written — secure fine-grained-PAT clone, 2-env setup, local Postgres, non-GPU/GPU steps split
+- [x] Verified: nothing needed to run/test is gitignored (few-shot pool + gold set + code all tracked); only `.env`/`index/` (recreated/rebuilt) + results (now versioned) special-cased
+
+### Non-GPU setup on box (🟢 ready — runbook §1–§6)
+- [ ] Verify space (~25–30 GB free) + confirm port 8765 free
+- [ ] Secure clone (fine-grained read-only PAT, no credential helper, strip after)
+- [ ] Own Miniconda + `env-app` = `pip install -r requirements.txt`
+- [ ] User-local Postgres cluster on 5433 + `createdb gst_official`
+- [ ] `.env` from template (localhost DB + localhost vLLM)
+- [ ] Seed DB + verify counts (20/63/12)
+
+### GPU-gated (🔴 after VRAM window — runbook §7–§8)
+- [ ] `env-serve` = `pip install vllm`; serve XiYanSQL-7B, **low** `--gpu-memory-utilization` (~0.25), FlashInfer/nvcc traps guarded, port 8765
+- [ ] Run app (Streamlit) / RAG benchmark end-to-end on box; verify EX reproduces
+
 ## Phase 6: Production Hardening (post-thesis green light)
 
 - [ ] PostgreSQL migration

@@ -675,6 +675,43 @@ print('Shots:', [s['question'] for s in shots])
 
 **When:** After thesis demo is validated and green light is received.
 
+### 6-DEPLOY: IITH Portainer/H100 box — IN PROGRESS (2026-07-07)
+
+Advisor (Subbareddy Batreddy) asked to deploy on a lab GPU server — **replaces** the
+borrowed shared-SLURM HPC as the deployment target. Access is **Portainer web UI only**
+(`https://103.230.85.116/portainer`, no SSH); work inside one shared container
+`iit-hyderabad` (Ubuntu 22.04, 128 CPU / 760 GB RAM / **1× H100 NVL 95.8 GB**, driver
+575 / CUDA 12.9). Our dir: `/workspace/IITH_GST/Subbareddy/ankit-text2sql`.
+
+**Setup model:** collapse the current *laptop + HPC* split into ONE container — two
+conda envs: `env-app` (`pip install -r requirements.txt`, CPU torch, pipeline/Streamlit/
+seed) + `env-serve` (`pip install vllm`, GPU torch) talking over `localhost:8765` (no
+tunnel). No code/requirements change — identical envs, just co-located.
+
+**Done this session (2026-07-07):**
+- Merged `rag-enhancement` → `main` (fast-forward, 0 conflicts; base pipeline files
+  byte-identical, RAG is additive/opt-in) and pushed. `main` = `origin/main`.
+- Versioned `evaluation/results/` as a proof-of-work snapshot (baseline EX 90.2%, Full
+  RAG 98.2%) tied to the code commit — CSVs + README 2×2 + per-question jsonl traces
+  (~11 MB). Non-reproducible once the 4th schema lands, so frozen now.
+- Wrote `deploy_runbook.md` (local, gitignored) — paste-by-block steps §0–§9.
+
+**⚠️ BLOCKER — GPU oversubscribed:** H100 at ~91/96 GB used (mayank's Qwen3.6-27B-FP8
+@ util 0.80 ≈ 76 GB + giridhar's rag-chatbot ≈ 15 GB). A 7B needs ~16–20 GB → cannot
+serve until the card frees. Awaiting a coordinated VRAM window (told "come after lunch").
+Ports taken: 8001/8011/8080/~3000; **8765 free** (confirm before serving). Serve with
+**LOW** `--gpu-memory-utilization` (~0.25), never grab 0.80 on the shared card.
+
+**Non-GPU steps doable now (runbook §1–§6):** verify space (~25–30 GB, models not repo
+— clone is ~5 MB) → secure fine-grained-PAT clone (read-only, entered at prompt, no
+credential helper) → own Miniconda `env-app` → user-local Postgres cluster on 5433 →
+`.env` from template → seed + verify counts (20/63/12). GPU-gated (§7–§8): serve vLLM
+(FlashInfer/nvcc traps guarded), run app / RAG benchmark.
+
+**Safety:** shared container, others' work LIVE — never stop/kill it; work only in our
+dir; co-tenants have root → keep the clone PAT off disk, strip after; don't use mayank's
+`(base)` conda.
+
 ### 6A. Database Hardening
 - PostgreSQL already in use (`gst_official`) — migration done in Phase 1 redo
 - Create a dedicated read-only role for the pipeline (currently uses `default_transaction_read_only`)
@@ -722,6 +759,7 @@ print('Shots:', [s['question'] for s in shots])
 | 7 | Phase 5 `[DONE]` | 112-pair gold set + full baseline (runs=3) on XiYanSQL-7B → EX 90.2% ±0.0; failures triaged, general (non-overfit) fixes applied, residuals scoped as RAG targets | `main` |
 | Next | Phase 1 (redo) | 4th schema from guide | `main` |
 | **Now** | Phase 5-B `[DONE]` | RAG branch complete: FAISS schema+few-shot retrieval, RAG pipeline, full Grid-A (2×2). **Full RAG EX 98.2% (vs 90.2% baseline) at ~57% fewer tokens; decode 25%→100%.** Schema-alone hurts; few-shot is the workhorse; schema pays off only with few-shots | `rag-enhancement` |
+| **Now** | Phase 6-DEPLOY `[IN PROGRESS]` | Deploy to IITH Portainer/H100 box. RAG merged→`main` + results versioned (proof snapshot) + `deploy_runbook.md`. **Blocked on GPU VRAM** (H100 oversubscribed); non-GPU setup (clone/env/Postgres/seed) ready to run | `main` |
 | TBD | Ablations | All deferred ablation studies | `main` / `rag-enhancement` |
 | TBD | Phase 6 | FastAPI + security hardening (when green light) | `main` (merge) |
 
