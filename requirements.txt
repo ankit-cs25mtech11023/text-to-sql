@@ -67,6 +67,19 @@ safetensors==0.8.0
 scikit-learn==1.9.0
 scipy==1.17.1
 
+# ── Phase 5: Figures / thesis-report charts + slide deck (pptx) ──────────────
+matplotlib==3.11.0
+seaborn==0.13.2
+python-pptx==1.0.2
+XlsxWriter==3.2.9
+# deps pulled by matplotlib
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.63.0
+kiwisolver==1.5.0
+pillow==12.2.0
+pyparsing==3.3.2
+
 # ── Upcoming phases (install when needed) ────────────────────────────────────
-# Phase 5: matplotlib>=3.8, seaborn>=0.13, pytest>=8.0, jupyter>=1.0
+# Phase 5: pytest>=8.0, jupyter>=1.0
 # Phase 6: fastapi>=0.111, uvicorn>=0.30, slowapi>=0.1
