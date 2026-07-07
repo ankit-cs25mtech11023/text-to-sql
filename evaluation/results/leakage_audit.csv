@@ -1,0 +1,143 @@
+pool_id,pool_category,max_cosine,closest_eval_id,flagged_cosine,sql_template_twin,pool_question,closest_eval_question
+1001,decode,0.817,71,0,,"What is the total IGST payable for each financial year, labelled by year?","What is the total state income for each financial year, labelled by year?"
+1002,decode,0.8138,112,0,,What is the total CGST payable per financial year name?,What is the total CGST tax payable declared across all GSTR-7 returns?
+1003,decode,0.7516,71,0,,"What is the total net IGST input tax credit available for each financial year, shown by year label?","What is the total state income for each financial year, labelled by year?"
+1004,decode,0.8381,45,0,,What is the total state income per month name in FY 2025-26?,What is the total state income for financial year 2024-25?
+1005,decode,0.7986,47,0,,What is the total SGST payable per quarter in FY 2025-26?,What is the total SGST payable across all GSTR-3B returns?
+1006,decode,0.8985,53,0,,How many GSTR-3B returns were filed in each quarter of FY 2024-25?,How many GSTR-3B returns were filed in financial year 2025-26?
+1007,decode,0.7934,48,0,,What is the total IGST payable per month name in FY 2025-26?,What is the total IGST payable across all GSTR-3B returns?
+1008,decode,0.7892,52,0,,"What is the total reverse-charge inward taxable value for each financial year, labelled by year?",What is the total value of inward supplies liable to reverse charge across all returns?
+1009,decode,0.8535,71,0,,What is the average state income per return for each financial year name?,"What is the total state income for each financial year, labelled by year?"
+1010,decode,0.8788,76,0,,"What is the total tax payable (SGST + CGST + IGST) for each financial year, labelled by year?",What is the total tax payable (SGST + CGST + IGST) for each division?
+1011,decode,0.9148,45,1,,What is the total state income per quarter in FY 2024-25?,What is the total state income for financial year 2024-25?
+1012,decode,0.8205,78,0,,How many distinct taxpayers filed in each month name of FY 2024-25?,"How many distinct taxpayers filed in each financial year, labelled by year?"
+1013,decode,0.779,51,0,,What is the total net SGST input tax credit available for each financial year name?,What is the total net SGST ITC available across all GSTR-3B returns?
+1014,decode,0.9563,53,1,,How many GSTR-3B returns were filed in each month name of FY 2025-26?,How many GSTR-3B returns were filed in financial year 2025-26?
+1015,decode,0.808,74,0,,What is the total CGST payable per quarter in FY 2024-25?,What is the total outward taxable value per quarter in FY 2024-25?
+1016,ranking,0.9624,26,1,,List the top 3 consignees by total assessable value.,List the top 3 consignors by total assessable value.
+1017,ranking,0.9215,25,1,,Which origin state has the highest total CGST in e-way bills?,Which destination state has the highest total IGST in e-way bills?
+1018,ranking,0.8884,24,0,,Which HSN code has the highest average assessable amount per item line?,Which 3 HSN codes have the highest total assessable amount?
+1019,ranking,0.7874,26,0,,List the top 3 consignors by number of e-way bills generated.,List the top 3 consignors by total assessable value.
+1020,ranking,0.9276,38,1,,Which destination state received the most e-way bills?,Which origin state has the most e-way bills?
+1021,ranking,0.7351,42,0,,List the top 2 origin states by total invoice value.,What is the total IGST for each origin state?
+1022,ranking,0.8273,10,0,,Which consignee has the highest total IGST across their e-way bills?,What is the total IGST across all e-way bills?
+1023,ranking,0.891,79,0,,List the top 3 taxpayers by total net ITC available (SGST + CGST + IGST) in FY 2024-25.,List the top 5 taxpayers by total tax payable (SGST + CGST + IGST) in FY 2024-25.
+1024,ranking,0.8816,61,0,,Which division has the highest total outward taxable value?,What is the total outward taxable value for each division?
+1025,ranking,0.8161,72,0,,List the top 5 taxpayers by total state income across all years.,List the top 4 taxpayers by total outward taxable value across all years.
+1026,ranking,0.8679,64,0,,Which 3 ranges have the most GSTR-3B returns?,Which 3 divisions have the most GSTR-3B returns?
+1027,ranking,0.8421,44,0,,Which taxpayer filed the most GSTR-3B returns?,How many distinct taxpayers filed GSTR-3B?
+1028,ranking,0.7698,76,0,,List the top 2 divisions by total SGST payable.,What is the total tax payable (SGST + CGST + IGST) for each division?
+1029,ranking,0.905,75,1,,Which unit collected the most state income?,Which division collected the most state income?
+1030,ranking,0.7937,84,0,,List the top 3 deductors by number of GSTR-7 returns filed.,How many distinct deductors filed GSTR-7 returns?
+1031,ranking,0.8785,102,0,,List the top 3 deductees by number of TDS rows recorded against them.,List the top 3 deductees by total base amount on which TDS was deducted.
+1032,ranking,0.9163,102,1,,List the top 2 deductors by total base amount on which TDS was deducted.,List the top 3 deductees by total base amount on which TDS was deducted.
+1033,ranking,0.8886,108,0,,Which return period had the highest total TDS deducted?,Which deductor deducted the highest total TDS?
+1034,ranking,0.8944,102,0,,List the top 3 deductees by total IGST TDS withheld.,List the top 3 deductees by total base amount on which TDS was deducted.
+1035,ranking,0.8213,108,0,,Which deductor declared the highest total tax payable?,Which deductor deducted the highest total TDS?
+1036,domain_specific,0.9231,5,1,,What is the total CGST plus SGST collected on intra-state e-way bills?,What is the total tax (CGST + SGST + IGST) collected across all e-way bills?
+1037,domain_specific,0.937,5,1,,What is the total tax (CGST + SGST + IGST + cess) on inter-state e-way bills?,What is the total tax (CGST + SGST + IGST) collected across all e-way bills?
+1038,domain_specific,0.9218,2,1,,What is the total assessable value of intra-state e-way bills?,What is the total assessable value across all e-way bills?
+1039,domain_specific,0.8568,3,0,,How many inter-state e-way bills carry non-zero IGST?,What is the total IGST collected on inter-state e-way bills?
+1040,domain_specific,0.8549,8,0,,What is the total cess collected across all e-way bills?,What is the total CGST across all e-way bills?
+1041,domain_specific,0.8422,3,0,,What is the total IGST on e-way bills originating from Gujarat?,What is the total IGST collected on inter-state e-way bills?
+1042,domain_specific,0.9283,40,1,,What is the total assessable amount of e-way bill items taxed above 12% IGST?,What is the total assessable amount of e-way bill items taxed at 18% IGST?
+1043,domain_specific,0.9107,40,1,,What is the total assessable amount of e-way bill items taxed at either 5% or 12% IGST?,What is the total assessable amount of e-way bill items taxed at 18% IGST?
+1044,domain_specific,0.9497,48,1,,What is the total IGST payable across GSTR-3B returns in FY 2025-26?,What is the total IGST payable across all GSTR-3B returns?
+1045,domain_specific,0.9747,65,1,,What is the total net CGST ITC available across all GSTR-3B returns?,What is the total net ITC available (SGST + CGST + IGST) across all GSTR-3B returns?
+1046,domain_specific,0.9719,65,1,,What is the total net IGST ITC available across all GSTR-3B returns?,What is the total net ITC available (SGST + CGST + IGST) across all GSTR-3B returns?
+1047,domain_specific,0.9521,58,1,,What is the total CGST paid in cash across all GSTR-3B returns?,What is the total SGST paid in cash across all GSTR-3B returns?
+1048,domain_specific,0.9539,48,1,,What is the total IGST paid in cash across all GSTR-3B returns?,What is the total IGST payable across all GSTR-3B returns?
+1049,domain_specific,0.8662,76,0,,What is the total tax payable (SGST + CGST + IGST + cess) in FY 2024-25?,What is the total tax payable (SGST + CGST + IGST) for each division?
+1050,domain_specific,0.8985,65,0,,What is the total IGST ITC available on other inward supplies across all GSTR-3B returns?,What is the total net ITC available (SGST + CGST + IGST) across all GSTR-3B returns?
+1051,domain_specific,0.9488,48,1,,What is the total CGST payable across all GSTR-3B returns?,What is the total IGST payable across all GSTR-3B returns?
+1052,domain_specific,0.9452,89,1,,What is the total SGST TDS withheld across all deductee records?,What is the total CGST TDS withheld across all deductee records?
+1053,domain_specific,0.9456,99,1,,What is the total IGST TDS withheld at the invoice level across all returns?,What is the total TDS withheld at the invoice level across all returns?
+1054,domain_specific,0.9677,105,1,,What is the total IGST tax payable declared across all GSTR-7 returns?,What is the total tax payable (IGST + CGST + SGST) declared across all GSTR-7 returns?
+1055,domain_specific,0.9585,105,1,,What is the total SGST tax payable declared across all GSTR-7 returns?,What is the total tax payable (IGST + CGST + SGST) declared across all GSTR-7 returns?
+1056,domain_specific,0.9718,106,1,,What is the total IGST tax paid in cash across all GSTR-7 returns?,What is the total tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?
+1057,domain_specific,0.9291,90,1,,What is the total base amount on which TDS was deducted at the invoice level?,What is the total base amount on which TDS was deducted?
+1058,domain_specific,0.9208,99,1,,What is the total CGST TDS withheld at the invoice level across all returns?,What is the total TDS withheld at the invoice level across all returns?
+1059,domain_specific,0.9679,106,1,,What is the total CGST tax paid in cash across all GSTR-7 returns?,What is the total tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?
+1060,aggregation,0.8769,10,0,,What is the highest IGST on any single e-way bill?,What is the total IGST across all e-way bills?
+1061,aggregation,0.9066,15,1,,What is the lowest assessable value among all e-way bills?,What is the highest assessable value among all e-way bills?
+1062,aggregation,0.899,11,0,,How many distinct consignees are there?,How many distinct consignors are there?
+1063,aggregation,0.9524,12,1,,How many distinct origin states appear in e-way bills?,How many distinct destination states appear in e-way bills?
+1064,aggregation,0.9637,8,1,,What is the total CGST plus SGST across all e-way bills?,What is the total CGST across all e-way bills?
+1065,aggregation,0.9059,10,1,,What is the average IGST per e-way bill?,What is the total IGST across all e-way bills?
+1066,aggregation,0.8652,40,0,,How many item lines are taxed at 18% IGST?,What is the total assessable amount of e-way bill items taxed at 18% IGST?
+1067,aggregation,0.7772,15,0,,What is the highest assessable amount on any single item line?,What is the highest assessable value among all e-way bills?
+1068,aggregation,0.9352,47,1,,What is the average SGST payable per GSTR-3B return?,What is the total SGST payable across all GSTR-3B returns?
+1069,aggregation,0.9001,47,1,,What is the total cess payable across all GSTR-3B returns?,What is the total SGST payable across all GSTR-3B returns?
+1070,aggregation,0.8931,54,0,,What is the highest state income on any single GSTR-3B return?,What is the total state income across all GSTR-3B returns?
+1071,aggregation,0.968,91,1,,How many distinct return periods appear in GSTR-3B returns?,How many distinct return periods appear in GSTR-7 returns?
+1072,aggregation,0.9513,46,1,,What is the average outward taxable value across all GSTR-3B returns?,What is the total outward taxable value (regular sales) across all GSTR-3B returns?
+1073,aggregation,0.9164,56,1,,How many distinct units appear in GSTR-3B returns?,How many distinct ranges appear in GSTR-3B returns?
+1074,aggregation,0.8837,57,0,,What is the lowest state income among all GSTR-3B returns?,What is the average state income per GSTR-3B return?
+1075,aggregation,0.8698,88,0,,What is the average TDS (IGST + CGST + SGST) per deductee record?,What is the total IGST TDS withheld across all deductee records?
+1076,aggregation,0.9092,100,1,,What is the highest invoice value among invoice-level TDS rows?,What is the average invoice value across invoice-level TDS rows?
+1077,aggregation,0.9223,87,1,,How many invoice-level TDS amendment rows are there?,How many invoice-level TDS rows are there?
+1078,aggregation,0.9009,93,1,,How many cash-settlement rows are recorded for GSTR-7 returns?,How many tax-payable rows are recorded for GSTR-7 returns?
+1079,aggregation,0.9211,100,1,,What is the lowest invoice value among invoice-level TDS rows?,What is the average invoice value across invoice-level TDS rows?
+1080,aggregation,0.8893,90,0,,What is the average base amount on which TDS was deducted at the invoice level?,What is the total base amount on which TDS was deducted?
+1081,aggregation,0.8888,85,0,,How many distinct deductees appear in the TDS amendment records?,How many distinct deductees appear in GSTR-7 TDS records?
+1082,grouping,0.9274,42,1,,What is the total CGST for each origin state?,What is the total IGST for each origin state?
+1083,grouping,0.9109,33,1,,How many item lines are there for each HSN code?,Which HSN code appears on the most item lines?
+1084,grouping,0.9617,32,1,,What is the average assessable amount for each HSN code?,What is the total assessable amount for each HSN code?
+1085,grouping,0.8897,22,0,,What is the total assessable value for each destination state?,What is the total assessable value for each consignor state?
+1086,grouping,0.9187,21,1,,How many e-way bills are there for each combination of origin state and status?,How many e-way bills are there for each status?
+1087,grouping,0.8604,51,0,,What is the total net SGST ITC available for each division?,What is the total net SGST ITC available across all GSTR-3B returns?
+1088,grouping,0.8339,60,0,,What is the total cess payable for each approving authority?,What is the total state income for each approving authority?
+1089,grouping,0.939,69,1,,What is the average state income for each division?,What is the total state income for each division?
+1090,grouping,0.9237,76,1,,What is the total IGST payable for each division?,What is the total tax payable (SGST + CGST + IGST) for each division?
+1091,grouping,0.9649,43,1,,How many GSTR-3B returns were filed in each return period?,How many GSTR-3B returns were filed?
+1092,grouping,0.8922,61,0,,What is the total outward taxable value for each range?,What is the total outward taxable value for each division?
+1093,grouping,0.9588,88,1,,What is the total IGST TDS withheld from each deductee?,What is the total IGST TDS withheld across all deductee records?
+1094,grouping,0.932,86,1,,How many deductee TDS rows are there for each return period?,How many deductee-wise TDS rows are there?
+1095,grouping,0.9572,96,1,,What is the total base amount on which TDS was deducted for each deductee?,What is the total TDS deducted from each deductee?
+1096,grouping,0.9584,107,1,,How many invoice-level TDS rows are there for each deductee?,How many invoice-level TDS rows does each deductor have?
+1097,grouping,0.9303,68,1,,What is the total tax payable (IGST + CGST + SGST) for each return period?,What is the total tax payable (SGST + CGST + IGST) across all GSTR-3B returns?
+1098,join,0.8778,35,0,,What is the average assessable amount of items on cancelled e-way bills?,What is the total assessable amount of items on active e-way bills?
+1099,join,0.9363,30,1,,How many e-way bills were rejected according to the rejection event log?,How many rejection events were recorded on e-way bills?
+1100,join,0.8232,1,0,,How many e-way bills had a transporter change recorded?,How many e-way bills are there?
+1101,join,0.9229,20,1,,What is the total assessable amount of items on inter-state e-way bills?,What is the total assessable amount across all e-way bill items?
+1102,join,0.9344,16,1,,How many item lines belong to active e-way bills?,How many item lines are there across all e-way bills?
+1103,join,0.8624,104,0,,What is the total TDS deducted across all returns filed in November 2025?,What is the total TDS deducted by each deductor for the period October 2025?
+1104,join,0.9524,90,1,,"What is the total base amount on which TDS was deducted, for each deductor?",What is the total base amount on which TDS was deducted?
+1105,join,0.9006,103,1,,How many distinct deductees did each deductor deduct TDS from?,Which deductor deducted TDS from the most distinct deductees?
+1106,join,0.8785,107,0,,What is the total invoice value of TDS invoices for each deductor?,How many invoice-level TDS rows does each deductor have?
+1107,join,0.8913,104,0,,What is the total TDS deducted from each deductee in December 2025?,What is the total TDS deducted by each deductor for the period October 2025?
+1108,join,0.8188,109,0,,What is the total tax payable declared by each deductor?,What is the total TDS deducted by each deductor in each return period?
+1109,join,0.7875,96,0,,What is the total tax paid in cash by each deductor?,What is the total TDS deducted from each deductee?
+1110,filtering,0.8185,23,0,,How many e-way bills originate from Gujarat?,How many e-way bills originate from each state?
+1111,filtering,0.7972,1,0,,How many e-way bills are destined for Maharashtra?,How many e-way bills are there?
+1112,filtering,0.8569,27,0,,How many e-way bills declared a travel distance over 500 km?,"What is the average travel distance declared on e-way bills, in km?"
+1113,filtering,0.8678,15,0,,How many e-way bills have an assessable value above 100000?,What is the highest assessable value among all e-way bills?
+1114,filtering,0.8547,46,0,,How many GSTR-3B returns reported outward taxable value above 1000000?,What is the total outward taxable value (regular sales) across all GSTR-3B returns?
+1115,filtering,0.8845,43,0,,How many GSTR-3B returns were filed in Division 1 (ABD)?,How many GSTR-3B returns were filed?
+1116,filtering,0.794,48,0,,How many GSTR-3B returns had positive net IGST input tax credit?,What is the total IGST payable across all GSTR-3B returns?
+1117,filtering,0.8708,84,0,,How many distinct deductors filed GSTR-7 returns for December 2025?,How many distinct deductors filed GSTR-7 returns?
+1118,filtering,0.8716,88,0,,How many deductee TDS rows have non-zero IGST withheld?,What is the total IGST TDS withheld across all deductee records?
+1119,filtering,0.9275,101,1,,How many GSTR-7 returns were filed in the year 2025?,How many GSTR-7 returns were filed for the period October 2025?
+1120,quirk,0.9198,13,1,,What is the total invoice value (gross) on inter-state e-way bills?,"What is the total invoice value (gross, including tax) across all e-way bills?"
+1121,quirk,0.9336,27,1,,"What is the maximum travel distance declared on any e-way bill, in km?","What is the average travel distance declared on e-way bills, in km?"
+1122,quirk,0.8501,16,0,,What is the total quantity shipped across all e-way bill item lines?,How many item lines are there across all e-way bills?
+1123,quirk,0.7601,7,0,,What is the earliest e-way bill generation timestamp?,How many e-way bills have expired?
+1124,quirk,0.7602,49,0,,How many distinct ranges appear under CENTER jurisdiction?,How many GSTR-3B returns were filed under CENTER jurisdiction?
+1125,quirk,0.7056,47,0,,What is the latest materialized-view refresh date among GSTR-3B returns?,What is the total SGST payable across all GSTR-3B returns?
+1126,quirk,0.9253,56,1,,How many distinct ranges appear in GSTR-3B returns for FY 2025-26?,How many distinct ranges appear in GSTR-3B returns?
+1127,quirk,0.9476,111,1,,What is the latest filing date among all GSTR-7 returns?,What is the earliest filing date among all GSTR-7 returns?
+1128,subquery,0.8785,15,0,,How many e-way bills have an assessable value above the overall average assessable value?,What is the highest assessable value among all e-way bills?
+1129,subquery,0.8764,41,0,,How many inter-state e-way bills have IGST above the average IGST of inter-state e-way bills?,How many e-way bills have a total tax (CGST+SGST+IGST) above the average?
+1130,subquery,0.8396,16,0,,How many e-way bill item lines have an assessable amount above the average line amount?,How many item lines are there across all e-way bills?
+1131,subquery,0.7615,77,0,,"How many taxpayers had a total state income above the average taxpayer's total state income, across all years?",How many taxpayers in FY 2024-25 had a total outward taxable value above the average taxpayer's total?
+1132,subquery,0.8724,46,0,,How many GSTR-3B returns have outward taxable value above the overall average return value?,What is the total outward taxable value (regular sales) across all GSTR-3B returns?
+1133,subquery,0.8538,69,0,,How many divisions have a total state income above the average division total?,What is the total state income for each division?
+1134,subquery,0.8279,97,0,,How many deductees had a total TDS above the average deductee's total TDS?,Which deductee had the highest total TDS deducted from them?
+1135,subquery,0.7794,84,0,,How many deductors filed more returns than the average number of returns per deductor?,How many distinct deductors filed GSTR-7 returns?
+1136,having,0.9145,23,1,,Which origin states have more than 3 e-way bills?,How many e-way bills originate from each state?
+1137,having,0.8496,61,0,,Which divisions have a total outward taxable value above 10000000?,What is the total outward taxable value for each division?
+1138,having,0.7857,78,0,,Which taxpayers filed in more than 5 distinct return periods?,"How many distinct taxpayers filed in each financial year, labelled by year?"
+1139,having,0.8861,84,0,,Which deductors filed GSTR-7 returns in more than one return period?,How many distinct deductors filed GSTR-7 returns?
+1140,having,0.8172,95,0,,Which return periods have a total TDS above 300000?,What is the total TDS deducted in each return period?
+1141,aggregation,0.845,88,0,,What is the average TDS deducted (IGST+CGST+SGST) per deductor?,What is the total IGST TDS withheld across all deductee records?
+1142,grouping,0.8731,96,0,,"For each deductor, what is the total TDS deducted (IGST+CGST+SGST) from each of their deductees?",What is the total TDS deducted from each deductee?

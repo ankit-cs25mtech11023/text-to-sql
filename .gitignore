@@ -28,8 +28,9 @@ SQL_venv/
 .DS_Store
 Thumbs.db
 
-# Evaluation results (large, regenerable) — whole tree incl. ablations/ + README manifest
-evaluation/results/
+# Evaluation results are VERSIONED (proof-of-work snapshot, tied to the code commit
+# that produced them; non-reproducible once the schema changes). CSVs + README +
+# per-question jsonl error-analysis traces all committed. ~11 MB, well under GitHub caps.
 
 # Local learning / scratch docs (never commit — see feedback_local_docs)
 learn_RAG
@@ -53,3 +54,4 @@ system_design.md
 thesis_blueprint.md
 thesis_review.md
 report/
+deploy_runbook.md
