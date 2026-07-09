@@ -48,10 +48,5 @@ class RAGTextToSQLPipeline(TextToSQLPipeline):
         self._retriever = retriever or RAGRetriever(settings, schema_indexer=schema_indexer)
         self._rag_mode = rag_mode
         builder = RAGPromptBuilder(ctx, self._retriever, settings, mode=rag_mode)
-        llm = make_client(
-            provider=settings.default_provider,
-            model=settings.default_model,
-            base_url=settings.vllm_base_url,
-            api_key=settings.vllm_api_key,
-        )
+        llm = make_client(**settings.llm_client_kwargs())
         self._generator = SQLGenerator(llm, builder)

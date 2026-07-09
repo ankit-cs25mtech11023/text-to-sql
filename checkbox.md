@@ -127,7 +127,64 @@
 > footnotes, not result-movers. Resume only if residuals become a priority or a reviewer asks.
 - [ ] *(parked)* #4 cross-encoder reranker · #5 dynamic-k · #8 structural/AST index · #13 pool-size sweep · top-K table sweep · hybrid table-retrieval
 
-## Phase 6-DEPLOY: IITH Portainer/H100 box (IN PROGRESS, 2026-07-07)
+## Phase 7: Second-Model Comparison — Qwen3.6-27B-FP8 (Branch: `model-qwen27b`, 2026-07-08)
+
+> Lab-hosted API (`https://api.jaypokale.me/v1`, same H100 box). **Upper-bound comparison baseline
+> ONLY** (27B > 10B deploy cap). Reasoning model → needs client generalization + reasoning-output
+> extraction. `main` kept clean; merge when comparison table lands. Details: `plan.md` Phase 7.
+
+- [x] Move API key into `.env` (gitignored) + `.env.example` placeholders; gitignore `api_documentation.md` — key never committed
+- [x] Probe call (2026-07-08) → WAF passes w/ browser UA; **reasoning server-separated → `content` is clean SQL** (in `message.reasoning`, not `content`/`reasoning_content`); `finish_reason=stop`; completion tokens 265 (simple) → 1646 (3-table) ⇒ **bump max_tokens ~4000**, `_extract_sql` unchanged
+- [x] Context window confirmed **32768** (`/models max_model_len` + forced 400 error) = same as XiYanSQL vLLM (apples-to-apples); static prompt 26.5K + 4K output fits (30.5K < 32.7K)
+- [x] `git checkout -b model-qwen27b`
+- [x] `core/llm_client.py` — `default_headers` (browser UA) + accept `qwen` provider (same OpenAI-compatible VLLMClient); **context-length guard**: catch over-32K `BadRequestError` from a grown correction turn → return "" (graceful fail, no crash)
+- [x] `config/settings.py` — relax `validate_provider` to {vllm,qwen}; qwen_* fields + `qwen_max_tokens`; `llm_client_kwargs()` + `effective_max_tokens()` resolvers (both pipelines use them). **Real static prompt = 28.8K Qwen tokens** (probe-measured, > 26.5K o200k est) → only ~4K output room in 32K window → `qwen_max_tokens=3000` (attempt-1 fits w/ ~1K buffer). Tight-fit hits only the 2 full-static configs (baseline, few-shot-only); retrieved-schema RAG (~12.6K real) has ample room.
+- [x] `core/pipeline.py` + `core/rag_pipeline.py` — use `settings.llm_client_kwargs()` + `effective_max_tokens()` (one resolver, both providers)
+- [x] `evaluation/benchmark.py` — `--provider {vllm,qwen}` flag (model_copy override)
+- [x] Smoke test (provider=qwen, static baseline, real DB): 2 Qs pass end-to-end (reasoning stripped → clean SQL → count=20 ✓, IGST ✓), 1 attempt each
+- [x] ~~`_extract_sql` strip reasoning~~ — **not needed**, endpoint pre-separates reasoning (probe-confirmed)
+- [x] Wire `enable_thinking` as qwen-only settings toggle (`qwen_enable_thinking`, default **False**) → passed via `extra_body={"chat_template_kwargs":{"enable_thinking":...}}` in `VLLMClient`; threaded through `llm_client_kwargs()` + `make_client`; vLLM path unchanged (extra_body None). Live-confirmed: thinking-off call 0.8s, clean `SELECT 1;`
+- [x] Static baseline eval (thinking-OFF, `--runs 3`) → `evaluation/results/qwen27b_baseline.csv` — **EX 92.9% ±0.0, VER 100% ±0.0** (deterministic). Beats XiYanSQL static 90.2%/97.6% (+2.7 EX). **decode 100%** (XiYan static was 25% — Qwen solves decode-JOIN natively). Weak: ranking 50% (7/14), having 0% (n=1), GSTR-7 87.5%, challenging 82.1%. ~4.7s/q
+- [x] Few-shot RAG eval (thinking-OFF, hybrid k=5, `--runs 3`) → `evaluation/results/qwen27b_rag_fewshot.csv` — **EX 100% ±0.0, VER 100% ±0.0** (0 fails). vs XiYanSQL few-shot-only 97.3/100 (+2.7); baseline 92.9→100 (+7.1): ranking 50→100, having 0→100. ~20.2k tok (chars/4), retrieval 216 ms/q. ⚠ 100% on toy DB = W1 distinguishability concern (Phase 9 Tier-1). *(`--rag-mode both` not run — few-shot alone already saturates)*
+- [ ] *(partial)* Comparison table → `results/README.md` Phase 7 section — **only 2 of 4 Qwen cells populated** (baseline 92.9%, few-shot RAG 100%). **TODO: schema-only + full-RAG (`--rag-mode both`)** to match XiYan's 4-config 2×2 before the table is complete
+- [ ] Merge `model-qwen27b` → `main`
+
+## Phase 8: New Schemas (Branch: `new-schema`, extends Phase 1)
+
+> New govt schemas to be pasted into the branch. Pipeline is schema-agnostic — only `database/` +
+> descriptions + gold/pool data change. `main` stays clean. Details: `plan.md` Phase 8.
+
+- [ ] `git checkout -b new-schema`; paste new schema DDL → `database/Official_Schemas/`
+- [ ] Extend `database/descriptions_official.json` (schema-qualified keys, LLM-HIDE)
+- [ ] Seed toy data + verify counts
+- [ ] Confirm `SchemaExtractor` picks up + qualifies the new schema/tables
+- [ ] Grow gold eval set + RAG pool for the new module (disjoint-pool leakage discipline)
+- [ ] *(if it grows)* split methodology to `SCHEMA_plan.md`
+
+## Phase 9: Validity Hardening (review-driven, `thesis_review.md` 2026-07-02)
+
+> External review: engineering strong, exposure = **evaluation validity**. These gate whether the
+> headline (Full RAG 98.2% vs baseline 90.2%) survives an examiner. Backing spec = `thesis_review.md`
+> §3–§8. Some items fold into other branches (held-out → Phase 8; ≤10B peer → model branch).
+
+### Tier 1 — validity (gate the headline)
+- [ ] **Distinguishability audit** (W1, most serious) — `evaluation/distinguishability_audit.py`: per gold, 2–3 plausible-wrong variants → execute → fraction coincidentally matching gold on toy DB; if high → adversarialize `seed_data_official.py` + re-run 2×2
+- [ ] **Held-out confirmation set** (W2) — 30–40 fresh Qs, authored once, frozen configs, run once, reported unconditionally (**fold into Phase 8** new-module questions)
+- [ ] **Stats** (W4) — `evaluation/stats.py`: McNemar's (paired) baseline-vs-full-RAG + Wilson 95% CIs on all headline rates; reword +0.9pp deltas as mechanism (trace of #96), not magnitude
+- [ ] **Two missing ablations** (W3) — descriptions on/off; self-correction attempts 1-vs-3 (+ attempts-distribution table). Evidence 2 of 3 claimed contributions or cut them
+- [ ] **Tests + 2 bug fixes** (Critical 1/2/5) — reconstruct metrics+validator unit tests into `tests/` (currently empty despite "unit-tested" claim); fix EX `permutations()` blowup (hangs on `SELECT *`) + comma-FROM allow-list bypass in `sql_validator._extract_table_names`
+
+### Tier 2 — strengthen (if time)
+- [ ] Second **≤10B SQL model** via same harness (class-of-model evidence; Qwen-27B is upper-bound only) — **fold into model branch**
+- [ ] Guide spot-checks ~20 golds (inter-annotator signal, W5)
+- [ ] Real tokenizer counts (replace chars/4; Qwen 28.8K measured, use actual tokenizer for XiYan)
+- [ ] Paraphrase-robustness probe (10–15 paraphrases)
+- [ ] NL answer-generation stage (closes "non-technical officer" goal; high demo value)
+
+### Tier 3 — post-thesis / publication (parked)
+- [ ] Benchmark release (schema clearance), schema-retrieval-interference study, self-consistency, value/cell retrieval, abstention. See `thesis_review.md` §5.10
+
+## Phase 6-DEPLOY: IITH Portainer/H100 box (PARKED, 2026-07-08 — GPU blocker + redirected to Phase 7/8)
 
 > Advisor-requested deploy on lab GPU server (**replaces** borrowed SLURM HPC). Access =
 > Portainer web only (no SSH); shared container `iit-hyderabad`, 1× H100 NVL 95.8 GB,

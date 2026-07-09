@@ -36,12 +36,7 @@ class TextToSQLPipeline:
         self._allowed_tables: set[str] = extractor.get_allowed_table_names()
 
         builder = PromptBuilder(ctx, few_shot_n=settings.few_shot_examples)
-        llm = make_client(
-            provider=settings.default_provider,
-            model=settings.default_model,
-            base_url=settings.vllm_base_url,
-            api_key=settings.vllm_api_key,
-        )
+        llm = make_client(**settings.llm_client_kwargs())
         self._generator = SQLGenerator(llm, builder)
 
     def ask(self, question: str) -> PipelineResult:
@@ -53,7 +48,7 @@ class TextToSQLPipeline:
             max_attempts=self._settings.max_correction_attempts,
             temperature=self._settings.temperature,
             limit=self._settings.query_result_limit,
-            max_tokens=self._settings.max_tokens,
+            max_tokens=self._settings.effective_max_tokens(),
         )
         return PipelineResult(
             success=result.success,

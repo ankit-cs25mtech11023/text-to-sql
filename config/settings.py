@@ -1,18 +1,42 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
+# Cloudflare WAF fronting the Qwen endpoint blocks default SDK user-agents;
+# every request must masquerade as a browser or the connection is refused.
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+)
+
 
 class Settings(BaseSettings):
     database_url: str = "postgresql:///gst_official"
     descriptions_path: str = "database/descriptions_official.json"
 
-    # Local-only inference. APIs (Groq/OpenRouter) were dropped: the ~26.5K-token
-    # schema prompt exceeds free-tier context/TPM limits and rate caps make
-    # evaluation impractical. All models are served locally via vLLM (HPC).
-    default_provider: str = "vllm"
+    # Primary path is local vLLM (HPC). Groq/OpenRouter were dropped (26.5K prompt
+    # can't fit free tiers). Phase 7 re-adds ONE hosted provider, "qwen": a
+    # lab-hosted OpenAI-compatible endpoint on the same H100 box, used only as an
+    # upper-bound comparison baseline (27B > 10B deploy cap). vLLM stays the default.
+    default_provider: str = "vllm"                 # "vllm" | "qwen"
     default_model: str = "xiyansql"
     vllm_base_url: str = "http://localhost:8765/v1"
     vllm_api_key: str = "EMPTY"
+
+    # Phase 7 — Qwen3.6-27B-FP8 hosted API (key/url/model come from .env).
+    qwen_base_url: str = "https://api.jaypokale.me/v1"
+    qwen_api_key: str = "EMPTY"
+    qwen_model: str = "Qwen/Qwen3.6-27B-FP8"
+    # Reasoning model in a 32K window with a big static prompt is TIGHT: the full
+    # static schema is ~28.8K Qwen tokens (higher than the 26.5K o200k estimate), so
+    # attempt-1 leaves only ~4K. 3000 fits with a ~1K buffer for self-correction
+    # growth; over-length correction turns are caught gracefully in VLLMClient.
+    qwen_max_tokens: int = 3000
+    # Qwen3.6 is a reasoning model (~30s/call). The server honors
+    # extra_body={"chat_template_kwargs":{"enable_thinking":False}} to fully
+    # disable thinking → ~24x faster (30.9s→1.3s), 65-tok output, SQL still
+    # correct. Default OFF for a cheap laptop eval (deploy-style config); flip
+    # ON for the quality-ceiling run. Only the qwen provider uses this.
+    qwen_enable_thinking: bool = False
 
     temperature: float = 0.0
     max_tokens: int = 1024
@@ -45,9 +69,37 @@ class Settings(BaseSettings):
     @field_validator("default_provider")
     @classmethod
     def validate_provider(cls, v: str) -> str:
-        if v != "vllm":
-            raise ValueError("default_provider must be 'vllm' (local-only inference)")
+        if v not in {"vllm", "qwen"}:
+            raise ValueError("default_provider must be 'vllm' or 'qwen'")
         return v
+
+    def llm_client_kwargs(self) -> dict:
+        """Provider-appropriate args for make_client (one place both pipelines use)."""
+        if self.default_provider == "qwen":
+            return {
+                "provider": "qwen",
+                "model": self.qwen_model,
+                "base_url": self.qwen_base_url,
+                "api_key": self.qwen_api_key,
+                "default_headers": {"User-Agent": _BROWSER_UA},
+                "extra_body": {
+                    "chat_template_kwargs": {
+                        "enable_thinking": self.qwen_enable_thinking
+                    }
+                },
+            }
+        return {
+            "provider": "vllm",
+            "model": self.default_model,
+            "base_url": self.vllm_base_url,
+            "api_key": self.vllm_api_key,
+            "default_headers": None,
+            "extra_body": None,
+        }
+
+    def effective_max_tokens(self) -> int:
+        """Qwen (reasoning) needs a bigger completion budget than the 7B."""
+        return self.qwen_max_tokens if self.default_provider == "qwen" else self.max_tokens
 
     # extra="ignore" so stale .env keys (old GROQ/OPENROUTER) don't break startup.
     model_config = {

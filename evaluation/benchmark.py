@@ -90,8 +90,13 @@ def _append_trace(trace_rows, pipeline, it, res, ex, ver) -> None:
 
 
 def run(test_path: str, out_path: str, runs: int, rag: bool = False, rag_mode: str = "both",
-        retrieval_mode: str | None = None, rag_top_k: int | None = None) -> None:
+        retrieval_mode: str | None = None, rag_top_k: int | None = None,
+        provider: str | None = None) -> None:
     settings = get_settings()
+    if provider is not None:
+        settings = settings.model_copy(update={"default_provider": provider})
+        print(f"provider={provider}  model={settings.qwen_model if provider == 'qwen' else settings.default_model}"
+              f"  max_tokens={settings.effective_max_tokens()}")
     if rag:
         overrides: dict = {}
         if retrieval_mode is not None:
@@ -221,9 +226,11 @@ def main() -> None:
                     help="override settings.rag_retrieval_mode for this run (RAG only)")
     ap.add_argument("--rag-top-k", type=int, default=None,
                     help="override settings.rag_top_k_fewshots for this run (RAG only)")
+    ap.add_argument("--provider", default=None, choices=["vllm", "qwen"],
+                    help="override inference provider (qwen = Phase 7 hosted comparison baseline)")
     args = ap.parse_args()
     run(args.test, args.output, args.runs, rag=args.rag, rag_mode=args.rag_mode,
-        retrieval_mode=args.retrieval_mode, rag_top_k=args.rag_top_k)
+        retrieval_mode=args.retrieval_mode, rag_top_k=args.rag_top_k, provider=args.provider)
 
 
 if __name__ == "__main__":
