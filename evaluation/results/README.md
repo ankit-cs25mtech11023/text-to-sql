@@ -117,3 +117,70 @@ few-shot lift — so retrieval is not made redundant by scale on this schema; it
 models' residuals. Caveat: 100% ceilings on the toy DB sharpen the W1 distinguishability audit
 (Phase 9 Tier-1) — perfect scores are only as meaningful as the DB's ability to distinguish
 wrong SQL.
+
+## Phase 9 Tier-1 — Distinguishability audit (W1) — DONE (2026-07-11)
+
+`evaluation/distinguishability_audit.py` (seed=42, caps 3/3/2) → `distinguishability_audit.csv`.
+Per gold: plausible-wrong variants via 3 mutators (column-swap same-type/LLM-visible,
+filter-drop top-level BETWEEN-aware, table-swap shape-compatible), executed on `gst_official`,
+matched against gold with the exact EX `execution_match` (order_matters respected).
+
+**Headline: 268 variants generated, 261 ran, 23 matched gold → 19/111 questions (17.1%)
+have ≥1 colliding wrong variant.** By mutator: column-swap 14/171 (8.2%), filter-drop 3/24
+(12.5%), table-swap 6/66 (9.1%). By module: EWB 16.7%, GSTR-3B 7.9%, **GSTR-7 29.0%**.
+By difficulty: simple 10.2%, moderate 14.3%, challenging 33.3%.
+
+**Collision classes (manual review of all 23, spot-checked on DB):**
+1. **Domain-invariant equivalences (6 variants; would collide on REAL data too — not seed
+   flaws):** CGST=SGST equal-split law (#8, #9, #41 cgstval↔sgstval; #96 camt→samt; #106
+   cgst_tx→sgst_tx — verified SUM(cgstval)=SUM(sgstval)=59820 exactly) and igstval=0 on
+   intra-state rows (#3 drop-WHERE redundant by construction). Wrong-by-name, right-by-value.
+2. **Genuine toy-seed coincidences (17 variants; adversarial-seed-fixable):**
+   - equal event counts: canceldet=rejdtl=tdsa=2 rows (#29, #82)
+   - tax paid-by-cash == tax payable exactly, 1080000 both (#105, #106, #112) — everyone pays fully in cash
+   - no zero/NULL `isup_rev_txval` rows → filter never bites (#66)
+   - deductee name ↔ gstin 1:1 (#103); #distinct frgstin == #distinct toname (#11)
+   - every deductee has >1 return → HAVING never bites (#110)
+   - argmax stable across measures: top entity same under wrong ORDER BY column (#25, #75, #97, #108)
+   - count-above-threshold same under wrong measure (#77); tds↔tdsa ranking same (#108)
+**Excluding class-1, genuine-coincidence questions = 15/111 (13.5%).**
+
+**Interpretation:** every reported EX is an upper bound with ~13.5% per-question looseness on
+this seed; the 100% Qwen ceilings and 98.2% XiYan headline carry that caveat until re-run on
+adversarial seed. Colliding ids {3,8,9,11,25,29,41,66,75,77,82,96,97,103,105,106,108,110,112};
+note Qwen schema-only fails {25,75,97,103} are all colliding questions.
+
+**Adversarial-seed fix list (feeds Phase 8 re-seed, audit-looped):** unequal counts across
+event/amendment tables; partial cash payment (paid < payable); seed zero/NULL reverse-charge
+rows; duplicate deductee names across gstins; ≥1 single-return deductee; distinct argmax per
+measure (top-by-igstval ≠ top-by-assval etc.); distinct-count asymmetry (frgstin vs toname).
+
+## Phase 9 Tier-1 — Statistical treatment (W4) — DONE (2026-07-11)
+
+`evaluation/stats.py` (no scipy; exact binomial McNemar + Wilson CIs; per-question
+majority-binarized over runs) → `stats_wilson_ci.csv` + `stats_mcnemar.csv`.
+
+**Wilson 95% CIs (EX):** XiYan baseline 90.2 [83.3, 94.4] / schema 86.6 [79.1, 91.7] /
+few-shot 97.3 [92.4, 99.1] / full RAG 98.2 [93.7, 99.5]; Qwen baseline 92.9 [86.5, 96.3] /
+schema 94.6 [88.8, 97.5] / few-shot & full RAG 100 [96.7, 100].
+
+**McNemar exact (paired EX), key pairs:**
+| pair | b (A-only) | c (B-only) | p |
+|---|---|---|---|
+| XiYan baseline vs full RAG | 1 (#107) | 10 | **0.0117** |
+| XiYan baseline vs few-shot | 2 (#96,#107) | 10 | **0.0386** |
+| XiYan baseline vs schema-only | 7 | 3 | 0.3438 |
+| Qwen baseline vs full RAG | 0 | 8 | **0.0078** |
+| Qwen baseline vs schema-only | 0 | 2 | 0.5000 |
+| XiYan baseline vs Qwen baseline | 7 | 10 | 0.6291 |
+| XiYan full RAG vs Qwen full RAG | 0 | 2 (#62,#107) | 0.5000 |
+
+**Readings for the write-up:**
+1. **Headline RAG gains are significant** for both models (p=0.0117 / 0.0078) — the core claim survives.
+2. **Schema-retrieval interference (both signs) is NOT significant** at n=112 (XiYan −3.6 p=0.34;
+   Qwen +1.7 p=0.5) — word as observed mechanism (which tables dropped, which questions flipped),
+   never as established effect. Same for cross-model baseline gap (p=0.63) and full-RAG-vs-full-RAG.
+3. **Mechanism correction surfaced by the flip lists:** #96 and #107 PASSED baseline (3/3) — few-shot
+   RAG *regressed* both; full RAG recovered #96, #107 stays broken. So residual #107 is a
+   RAG-introduced regression, not a carried-over baseline failure; #62 is baseline-flaky (1/3).
+   Reword the residuals narrative accordingly.
