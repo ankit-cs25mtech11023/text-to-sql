@@ -836,9 +836,21 @@ Files: `qwen27b_{baseline,rag_schema,rag_fewshot,rag}.csv` + per-config traces. 
 3. **100% ceilings** (both few-shot configs) sharpen the W1 distinguishability audit (Phase 9
    Tier-1) — toy-DB perfect scores need the adversarial-variant check to be credible.
 
+### 7.6 UI model toggle (plan change, 2026-07-11)
+
+Original framing ("upper-bound baseline only, nothing ships on it") is softened: both models are
+live comparison candidates, and the Qwen endpoint costs us zero VRAM (co-tenant already serves it
+on the H100 box). So the UI must not hardcode a provider:
+- `ui/app.py` currently hardcodes `provider="vllm", model="xiyansql"` (line ~82) → replace with a
+  **sidebar provider/model selector** (XiYanSQL-7B local vLLM ↔ Qwen3.6-27B hosted), default XiYan.
+- Pipeline is re-inited on switch (`load_pipeline(provider, model)` already parameterized — only
+  the hardcoded call site changes).
+- The **≤10B deployment cap still stands** for the final govt deployment story; the toggle is for
+  flexible comparison/demo, not a deploy decision.
+
 **Merge:** fold to `main` once the comparison table lands (additive second provider, vLLM default
 untouched) — same clean-merge discipline as `rag-enhancement`. Table has landed (above) — merge
-decision pending with user. Optional follow-on: thinking-ON run (quality-ceiling config, §7.3b).
+pending the UI toggle (§7.6). Thinking-ON run skipped (thinking-OFF already at 100%; nothing to add).
 
 ---
 
