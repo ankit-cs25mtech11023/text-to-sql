@@ -889,11 +889,16 @@ run-once ≈ a held-out confirmation set). Cross-refs noted per item.
 
 ### Tier 1 — validity (do all; these gate the headline's credibility)
 
-1. **Distinguishability audit + adversarial seed data (W1 — most serious).** Toy DB (20 EWB / 63 3B /
-   12 R7 rows) lets a *wrong* query coincidentally return the gold result set → EX is an upper bound of
-   unquantified tightness. For each gold, generate 2–3 plausible-wrong variants (wrong same-type column,
-   dropped filter, wrong same-shape table), execute, report the fraction that coincidentally match gold.
-   If high → scale/adversarialize `seed_data_official.py` and re-run the 2×2. New: `evaluation/distinguishability_audit.py`.
+1. **Distinguishability audit + adversarial seed data (W1 — most serious).** ✅ **Audit DONE
+   (2026-07-11):** `evaluation/distinguishability_audit.py` (3 mutators: column-swap same-type,
+   filter-drop, table-swap shape-compatible; deterministic seed=42) → 268 variants, 261 ran,
+   **23 matched gold → 19/111 questions (17.1%) collide**; GSTR-7 worst (29.0%), challenging 33.3%.
+   Manual classification: 6 variants are **domain-invariant equivalences** (CGST=SGST equal-split law,
+   igstval=0 intra-state — would collide on real data too), 17 are **genuine toy-seed coincidences**
+   → net 15/111 (13.5%) seed-fixable looseness. Full findings + per-collision fix list in
+   `results/README.md`; report `results/distinguishability_audit.csv`. **Adversarial re-seed deferred
+   to Phase 8** (roadmap: seed is rebuilt there anyway, audit-looped from day one; audit script is the
+   loop's checker). Every reported EX carries the ~13.5% upper-bound caveat until the v2 re-run.
 2. **Held-out confirmation set (W2).** k/mode/pool-fix/gold-revisions all touched the same 112 →
    adaptive bias. 30–40 **fresh** questions, authored once, frozen configs, run once, reported
    unconditionally. **Fold into Phase 8** (new-module questions, run-once). Bounds the bias instead of

@@ -171,7 +171,7 @@
 > §3–§8. Some items fold into other branches (held-out → Phase 8; ≤10B peer → model branch).
 
 ### Tier 1 — validity (gate the headline)
-- [ ] **Distinguishability audit** (W1, most serious) — `evaluation/distinguishability_audit.py`: per gold, 2–3 plausible-wrong variants → execute → fraction coincidentally matching gold on toy DB; if high → adversarialize `seed_data_official.py` + re-run 2×2
+- [x] **Distinguishability audit** (W1, most serious, done 2026-07-11) — `evaluation/distinguishability_audit.py` (column-swap / filter-drop / table-swap mutators, seed=42): 268 variants → **19/111 questions (17.1%) collide**; classified 6 domain-invariant equivalences (CGST=SGST law) vs 17 seed coincidences → **13.5% seed-fixable looseness**. GSTR-7 worst (29%). Findings + Phase 8 fix list → `results/README.md`; report → `results/distinguishability_audit.csv`. Adversarial re-seed **deferred to Phase 8** (seed rebuilt there, audit-looped; this script = the loop's checker)
 - [ ] **Held-out confirmation set** (W2) — 30–40 fresh Qs, authored once, frozen configs, run once, reported unconditionally (**fold into Phase 8** new-module questions)
 - [ ] **Stats** (W4) — `evaluation/stats.py`: McNemar's (paired) baseline-vs-full-RAG + Wilson 95% CIs on all headline rates; reword +0.9pp deltas as mechanism (trace of #96), not magnitude
 - [ ] **Two missing ablations** (W3) — descriptions on/off; self-correction attempts 1-vs-3 (+ attempts-distribution table). Evidence 2 of 3 claimed contributions or cut them
