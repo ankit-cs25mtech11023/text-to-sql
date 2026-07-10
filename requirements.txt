@@ -80,6 +80,12 @@ kiwisolver==1.5.0
 pillow==12.2.0
 pyparsing==3.3.2
 
+# ── Phase 9: tests (validity hardening) ──────────────────────────────────────
+pytest==9.1.1
+# deps pulled by pytest
+iniconfig==2.3.0
+pluggy==1.6.0
+
 # ── Upcoming phases (install when needed) ────────────────────────────────────
-# Phase 5: pytest>=8.0, jupyter>=1.0
+# Phase 5: jupyter>=1.0
 # Phase 6: fastapi>=0.111, uvicorn>=0.30, slowapi>=0.1

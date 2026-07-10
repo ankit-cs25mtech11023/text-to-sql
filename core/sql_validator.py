@@ -102,18 +102,33 @@ _JOIN_KEYWORDS = {
     "FULL OUTER JOIN",
 }
 
+# Keywords that end a FROM clause's comma-separated table list (at the same
+# paren depth). SELECT covers subquery starts; ON/USING start join conditions.
+_FROM_TERMINATORS = {
+    "WHERE", "GROUP", "GROUP BY", "ORDER", "ORDER BY", "HAVING",
+    "LIMIT", "OFFSET", "UNION", "UNION ALL", "INTERSECT", "EXCEPT",
+    "ON", "USING", "WINDOW", "SELECT",
+}
+
 
 def _extract_table_names(stmt: Statement) -> set[str]:
     """Extract referenced table names, including schema-qualified dotted names
     (e.g. 'public.tbl_x', 'live_reports.r3b_...'). After a FROM/JOIN keyword we
     accumulate a Name (Punctuation '.' Name)* sequence into a single dotted
-    identifier, then stop at the first non-identifier token (alias, '(', etc.)."""
+    identifier, then stop at the first non-identifier token (alias, '(', etc.).
+
+    Old-style comma joins ('FROM a, b') are handled by tracking, per paren
+    depth, whether a FROM table list is open: a ',' at that depth re-arms table
+    expectation, so every listed table is extracted — not just the first
+    (previously tables after the comma silently bypassed the allow-list)."""
     Name = sqlparse.tokens.Name
     Punctuation = sqlparse.tokens.Punctuation
 
     tables: set[str] = set()
-    expecting = False        # just saw FROM/JOIN — next identifier is a table
+    expecting = False        # just saw FROM/JOIN/list-comma — next identifier is a table
     current: list[str] = []  # building a dotted identifier
+    depth = 0                # paren nesting depth
+    open_from: set[int] = set()  # depths where a FROM comma-list is still open
 
     def flush() -> None:
         nonlocal current, expecting
@@ -127,9 +142,30 @@ def _extract_table_names(stmt: Statement) -> set[str]:
             if expecting and current:
                 flush()
             continue
-        if token.ttype is Keyword and token.normalized.upper() in _JOIN_KEYWORDS:
+        is_kw = token.ttype is not None and token.ttype in Keyword
+        if is_kw and token.normalized.upper() in _JOIN_KEYWORDS:
             flush()
             expecting = True
+            if token.normalized.upper() == "FROM":
+                open_from.add(depth)
+            continue
+        if is_kw and token.normalized.upper() in _FROM_TERMINATORS:
+            flush()
+            open_from.discard(depth)
+            continue
+        if token.ttype is Punctuation and token.value == "(":
+            flush()
+            depth += 1
+            continue
+        if token.ttype is Punctuation and token.value == ")":
+            flush()
+            open_from.discard(depth)
+            depth -= 1
+            continue
+        if token.ttype is Punctuation and token.value == ",":
+            flush()
+            if depth in open_from:
+                expecting = True
             continue
         if expecting:
             if token.ttype is Name:

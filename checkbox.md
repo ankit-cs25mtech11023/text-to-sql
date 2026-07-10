@@ -175,7 +175,7 @@
 - [ ] **Held-out confirmation set** (W2) — 30–40 fresh Qs, authored once, frozen configs, run once, reported unconditionally (**fold into Phase 8** new-module questions)
 - [ ] **Stats** (W4) — `evaluation/stats.py`: McNemar's (paired) baseline-vs-full-RAG + Wilson 95% CIs on all headline rates; reword +0.9pp deltas as mechanism (trace of #96), not magnitude
 - [ ] **Two missing ablations** (W3) — descriptions on/off; self-correction attempts 1-vs-3 (+ attempts-distribution table). Evidence 2 of 3 claimed contributions or cut them
-- [ ] **Tests + 2 bug fixes** (Critical 1/2/5) — reconstruct metrics+validator unit tests into `tests/` (currently empty despite "unit-tested" claim); fix EX `permutations()` blowup (hangs on `SELECT *`) + comma-FROM allow-list bypass in `sql_validator._extract_table_names`
+- [x] **Tests + 2 bug fixes** (Critical 1/2/5, done 2026-07-11) — (a) EX `permutations()` blowup fixed: candidate-filter by per-column value-multiset (necessary condition ⇒ **verdict-preserving**) + 20k-assignment cap w/ warning; 150-col `SELECT *` case now <1s (was ~3M combos). (b) validator comma-FROM bypass fixed: per-paren-depth FROM-list tracking, `,` re-arms table expectation (`FROM a, b` now extracts both). (c) `tests/` reconstructed: 43 tests (27 metrics incl. both regressions, 16 validator incl. bypass). **Equivalence proven 2 ways:** 20k random adversarial old-vs-new cases = 0 mismatches; re-scored all 8 result CSVs (896 row-verdicts) on live DB = 0 changes
 
 ### Tier 2 — strengthen (if time)
 - [ ] Second **≤10B SQL model** via same harness (class-of-model evidence; Qwen-27B is upper-bound only) — **fold into model branch**

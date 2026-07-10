@@ -25,10 +25,16 @@ EX definition (documented so the thesis can state it precisely):
 from __future__ import annotations
 
 import re
+import warnings
 from decimal import Decimal
-from itertools import permutations
+from typing import Iterator
 
 import pandas as pd
+
+# Backstop for degenerate inputs (many prediction columns with identical value
+# multisets, none of which row-align with gold). Real predictions hit 1-3
+# candidate columns per gold column, so this is never approached.
+_MAX_ASSIGNMENTS = 20_000
 
 
 def _norm_cell(v: object) -> object:
@@ -48,7 +54,15 @@ def execution_match(
     pred_df: pd.DataFrame | None,
     order_matters: bool = False,
 ) -> bool:
-    """EX: does some column-selection of the prediction reproduce gold's rows?"""
+    """EX: does some column-selection of the prediction reproduce gold's rows?
+
+    The search over column selections is candidate-filtered: a prediction column
+    can stand in for a gold column only if their normalized value multisets are
+    equal (exact lists when order_matters) — a condition already implied by any
+    row-level match, so no verdict changes. This collapses the naive
+    npred!/(npred-ng)! permutation space (which hangs on a SELECT * prediction
+    against the 145-column GSTR-3B table) to a handful of assignments.
+    """
     if gold_df is None or pred_df is None:
         return False
     ng, npred = gold_df.shape[1], pred_df.shape[1]
@@ -56,12 +70,46 @@ def execution_match(
         return False
     gcols, pcols = _cols(gold_df), _cols(pred_df)
     gold_rows = list(zip(*gcols)) if gcols else []
-    for combo in permutations(range(npred), ng):
-        pred_rows = list(zip(*[pcols[c] for c in combo]))
-        if order_matters:
-            if pred_rows == gold_rows:
-                return True
-        elif sorted(gold_rows, key=repr) == sorted(pred_rows, key=repr):
+    target = gold_rows if order_matters else sorted(gold_rows, key=repr)
+
+    if order_matters:
+        candidates = [[j for j, pc in enumerate(pcols) if pc == gc] for gc in gcols]
+    else:
+        gkeys = [sorted(c, key=repr) for c in gcols]
+        pkeys = [sorted(c, key=repr) for c in pcols]
+        candidates = [[j for j, pk in enumerate(pkeys) if pk == gk] for gk in gkeys]
+    if any(not c for c in candidates):
+        return False
+
+    used: set[int] = set()
+    combo: list[int] = [0] * ng
+
+    def assignments(i: int) -> Iterator[tuple[int, ...]]:
+        for j in candidates[i]:
+            if j in used:
+                continue
+            used.add(j)
+            combo[i] = j
+            if i + 1 == ng:
+                yield tuple(combo)
+            else:
+                yield from assignments(i + 1)
+            used.discard(j)
+
+    tried = 0
+    for sel in assignments(0) if ng else iter([()]):
+        tried += 1
+        if tried > _MAX_ASSIGNMENTS:
+            warnings.warn(
+                f"execution_match: gave up after {_MAX_ASSIGNMENTS} column "
+                f"assignments (gold {ng} cols, pred {npred} cols) — treating as "
+                "no-match. Degenerate duplicate-column prediction?"
+            )
+            return False
+        pred_rows = list(zip(*[pcols[c] for c in sel]))
+        if not order_matters:
+            pred_rows = sorted(pred_rows, key=repr)
+        if pred_rows == target:
             return True
     return False
 
