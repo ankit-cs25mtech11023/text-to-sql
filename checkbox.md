@@ -149,8 +149,8 @@
 - [x] Schema-only RAG eval (thinking-OFF, box overnight run, `--runs 3`) → `qwen27b_rag_schema.csv` — **EX 94.6% ±0.0, VER 100% ±0.0**. **ABOVE its baseline (+1.7) — opposite sign to XiYan's schema-only dip (86.6, −3.6)**: fails {25,33,38,75,97,103} = strict subset of baseline fails (fixed #108,#110 + having; broke 0). Retrieval interference = small-model phenomenon
 - [x] Full RAG eval (thinking-OFF, box, `--runs 3`) → `qwen27b_rag.csv` — **EX 100% ±0.0, VER 100% ±0.0** (0 fails; ties few-shot-only). Schema-only's 6 fails all rescued by few-shots
 - [x] Comparison table → `results/README.md` Phase 7 section — **all 4 Qwen cells populated** (baseline 92.9 / schema 94.6 / few-shot 100 / full RAG 100 vs XiYan 90.2/86.6/97.3/98.2). Findings: interference sign-flip (model-dependent), RAG +7.1 even at 27B, ranking = generalist's weak category (50→100 via few-shots)
-- [ ] `ui/app.py` — sidebar provider/model toggle (XiYanSQL-7B vLLM ↔ Qwen3.6-27B hosted; default XiYan) — replaces hardcoded `provider="vllm"` (plan §7.6, 2026-07-11: both models are live comparison candidates; Qwen endpoint costs zero VRAM)
-- [ ] Merge `model-qwen27b` → `main` (after UI toggle)
+- [ ] *(deferred — demo-time, UI not relied on now)* `ui/app.py` sidebar provider/model toggle (XiYanSQL-7B vLLM ↔ Qwen3.6-27B hosted; default XiYan) — replaces hardcoded `provider="vllm"` (plan §7.6: both models live candidates; Qwen endpoint zero VRAM)
+- [ ] Merge `model-qwen27b` → `main`
 
 ## Phase 8: New Schemas (Branch: `new-schema`, extends Phase 1)
 

@@ -849,8 +849,9 @@ on the H100 box). So the UI must not hardcode a provider:
   flexible comparison/demo, not a deploy decision.
 
 **Merge:** fold to `main` once the comparison table lands (additive second provider, vLLM default
-untouched) — same clean-merge discipline as `rag-enhancement`. Table has landed (above) — merge
-pending the UI toggle (§7.6). Thinking-ON run skipped (thinking-OFF already at 100%; nothing to add).
+untouched) — same clean-merge discipline as `rag-enhancement`. Table has landed (above). UI toggle
+(§7.6) **deferred to demo-time** — UI not relied on now, does not gate the merge. Thinking-ON run
+skipped (thinking-OFF already at 100%; nothing to add).
 
 ---
 
