@@ -903,9 +903,15 @@ run-once ≈ a held-out confirmation set). Cross-refs noted per item.
    adaptive bias. 30–40 **fresh** questions, authored once, frozen configs, run once, reported
    unconditionally. **Fold into Phase 8** (new-module questions, run-once). Bounds the bias instead of
    arguing it.
-3. **Statistical treatment (W4).** McNemar's test (paired per-question) on baseline-vs-full-RAG +
-   Wilson 95% CIs on all headline rates. Reword every 1-question delta (+0.9pp = #96) as a *mechanism*
-   (trace), not a magnitude. New: `evaluation/stats.py` over existing `results/*.csv`.
+3. **Statistical treatment (W4).** ✅ **DONE (2026-07-11):** `evaluation/stats.py` — exact-binomial
+   McNemar (discordant counts are single-digit; chi-square invalid) + Wilson 95% CIs, majority-binarized
+   per question, 10 unit tests. Results: **RAG gains significant for both models** (XiYan
+   baseline→full-RAG b=1/c=10 p=0.0117; Qwen b=0/c=8 p=0.0078); **schema-retrieval interference NOT
+   significant either direction** (XiYan −3.6 p=0.34; Qwen +1.7 p=0.5), nor cross-model gaps (p≥0.5) —
+   these must be worded as mechanisms, not effects. Flip lists corrected the residuals narrative:
+   **#96/#107 passed baseline; few-shot RAG regressed both; full RAG recovered only #96** → #107 is a
+   RAG-introduced regression, #62 is baseline-flaky (1/3). Tables → `results/stats_wilson_ci.csv`,
+   `results/stats_mcnemar.csv`; readings in `results/README.md`.
 4. **Run the two missing ablations (W3).** descriptions on/off, and self-correction attempts 1-vs-3
    (+ attempts-distribution table). Evidences 2 of 3 claimed contributions — else cut the claims. One
    benchmark flag each.

@@ -1,0 +1,9 @@
+a,b,metric,n,a_only_wins,b_only_wins,p_exact,a_only_ids,b_only_ids
+XiYan baseline,XiYan full RAG,EX,112,1,10,0.0117,107,35 48 71 72 74 78 97 99 102 104
+XiYan baseline,XiYan few-shot,EX,112,2,10,0.0386,96 107,35 48 71 72 74 78 97 99 102 104
+XiYan baseline,XiYan schema-only,EX,112,7,3,0.3438,4 65 67 88 94 107 108,35 72 104
+XiYan few-shot,XiYan full RAG,EX,112,0,1,1.0,,96
+Qwen baseline,Qwen full RAG,EX,112,0,8,0.0078,,25 33 38 75 97 103 108 110
+Qwen baseline,Qwen schema-only,EX,112,0,2,0.5,,108 110
+XiYan baseline,Qwen baseline,EX,112,7,10,0.6291,25 33 38 75 103 108 110,35 48 62 71 72 74 78 99 102 104
+XiYan full RAG,Qwen full RAG,EX,112,0,2,0.5,,62 107
