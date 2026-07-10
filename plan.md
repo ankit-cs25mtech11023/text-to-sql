@@ -817,8 +817,28 @@ Same frozen 112 gold set, benchmark is provider-agnostic (only the client swaps)
   and the hosted endpoint has unknown rate/context caps. **Screen with `--runs 1`**, confirm context
   window ≥28K, then `--runs 3` if stable.
 
+### 7.5 Results — COMPLETE (2026-07-10, all thinking-OFF, runs=3, all ±0.0)
+
+| Configuration | XiYanSQL-7B EX | Qwen-27B EX | Δ |
+|---|---|---|---|
+| Baseline (static) | 90.2% | 92.9% | +2.7 |
+| Schema-only | 86.6% | **94.6%** | +8.0 |
+| Few-shot only | 97.3% | 100% | +2.7 |
+| Full RAG | 98.2% | **100%** | +1.8 |
+
+Files: `qwen27b_{baseline,rag_schema,rag_fewshot,rag}.csv` + per-config traces. Key findings:
+1. **Schema-retrieval interference is model-dependent** — schema-only *hurt* the 7B (−3.6) but
+   *helps* the 27B (+1.7; fail-set strict subset of its baseline, zero new breaks). The pruned
+   ~57%-cheaper prompt is safe for the large model, risky for the deployable one.
+2. **RAG still pays at 27B**: +7.1 over its own baseline (92.9→100) — scale doesn't make
+   retrieval redundant on this schema. Decode solved natively by reasoning (100% at static);
+   **ranking** is the generalist's weak category (50% static → 100% with few-shots).
+3. **100% ceilings** (both few-shot configs) sharpen the W1 distinguishability audit (Phase 9
+   Tier-1) — toy-DB perfect scores need the adversarial-variant check to be credible.
+
 **Merge:** fold to `main` once the comparison table lands (additive second provider, vLLM default
-untouched) — same clean-merge discipline as `rag-enhancement`.
+untouched) — same clean-merge discipline as `rag-enhancement`. Table has landed (above) — merge
+decision pending with user. Optional follow-on: thinking-ON run (quality-ceiling config, §7.3b).
 
 ---
 

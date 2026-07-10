@@ -80,28 +80,40 @@ chars/4 proxy — different tokenizer). ~4.7s/q thinking-OFF.
 |---|---|---|---|---|---|---|
 | `qwen27b_baseline.csv` | static full schema, no RAG | OFF | **92.9% ±0.0** | **100% ±0.0** | 3 | deterministic; beats XiYan static 90.2/97.6 (+2.7 EX). decode 100% (XiYan static 25%). Weak: ranking 50% (7/14), GSTR-7 87.5%, challenging 82.1% |
 | `qwen27b_rag_fewshot.csv` | few-shot RAG, hybrid k=5 | OFF | **100% ±0.0** | **100% ±0.0** | 3 | **perfect**; vs XiYan few-shot-only 97.3/100 (+2.7). baseline 92.9→100 (+7.1): ranking 50→100, having 0→100. ~20.2k tok (chars/4), retrieval 216 ms/q. ⚠ 100% on toy DB = W1 distinguishability concern |
+| `qwen27b_rag_schema.csv` | schema-only RAG, k5+core | OFF | **94.6% ±0.0** | **100% ±0.0** | 3 | **ABOVE baseline** (+1.7) — opposite sign to XiYan schema-only (86.6, −3.6). Fails {25,33,38,75,97,103} = strict subset of baseline fails (fixed #108,#110,having; broke 0). ranking 57%, challenging 89% |
+| `qwen27b_rag.csv` | **full RAG, k5+core, hybrid k5** | OFF | **100% ±0.0** | **100% ±0.0** | 3 | **perfect** (0 fails, ties few-shot-only); vs XiYan Full RAG 98.2/100. Schema fails all rescued by few-shots. ⚠ same W1 caveat |
 
 **Qwen trace policy:** per-config run-1 traces **kept** (parity with XiYan) — Qwen is performing
 well enough to be a live candidate given GPU constraints, so mechanism evidence is preserved.
 Benchmark writes the fixed-path `rag_traces.jsonl` each RAG run → after each Qwen config, copied to
 `qwen27b_<mode>_traces.jsonl` and the fixed path is restored to XiYan's committed version (so the
-XiYan proof snapshot is never clobbered). Files: `qwen27b_rag_fewshot_traces.jsonl` (done),
-`qwen27b_rag_schema_traces.jsonl` + `qwen27b_rag_traces.jsonl` (pending). Token counts are chars/4
+XiYan proof snapshot is never clobbered). Files: `qwen27b_rag_fewshot_traces.jsonl`,
+`qwen27b_rag_schema_traces.jsonl`, `qwen27b_rag_traces.jsonl` (all captured). Token counts are chars/4
 approx (Phase 9 #8 = real-tokenizer counts).
-| `qwen27b_rag_schema.csv` | schema-only RAG, k5+core | OFF | _pending_ | _pending_ | 3 | vs XiYan schema-only 86.6/97.3 |
-| `qwen27b_rag.csv` | **full RAG, k5+core, hybrid k5** | OFF | _pending_ | _pending_ | 3 | vs XiYan Full RAG 98.2/100 |
 
-### Model comparison 2×2 (XiYanSQL-7B vs Qwen3.6-27B, thinking-OFF)
+### Model comparison 2×2 (XiYanSQL-7B vs Qwen3.6-27B, thinking-OFF) — COMPLETE (2026-07-10)
 
 | Configuration | XiYanSQL-7B EX | Qwen-27B EX | Δ |
 |---|---|---|---|
 | Baseline (static) | 90.2% | **92.9%** | +2.7 |
-| Schema-only | 86.6% | _pending_ | — |
+| Schema-only | 86.6% | **94.6%** | +8.0 |
 | Few-shot only | 97.3% | **100%** | +2.7 |
-| Full RAG | 98.2% | _pending_ | — |
+| Full RAG | 98.2% | **100%** | +1.8 |
 
 **Baseline finding:** the 27B reasoning model clears the deployable 7B on the raw static
 prompt (+2.7 EX, VER 100%) and solves the decode-JOIN natively (100% vs XiYan's static 25%,
 which was the headline RAG motivator) — so a bigger model buys with reasoning what the 7B needs
-few-shot retrieval to reach. Whether RAG still lifts the 27B (or it's already near-ceiling) =
-the pending rows.
+few-shot retrieval to reach.
+
+**Schema-retrieval interference is model-dependent (headline Phase 7 finding).** Schema-only RAG
+*hurt* XiYan (−3.6 vs its baseline: retrieval drops tables the 7B needed) but *helps* Qwen
+(+1.7, fail-set a strict subset of baseline's, zero new breaks). The 27B tolerates a pruned
+retrieved schema where the 7B could not — the ~57%-cheaper prompt is safe for the large model,
+risky for the deployable one. Few-shots then close everything: both few-shot configs hit 100%
+(ranking 50→100, the one category where the generalist 27B lagged the SQL-specialist 7B).
+
+**RAG still pays at 27B:** +7.1 EX over its own baseline (92.9→100) — same magnitude as XiYan's
+few-shot lift — so retrieval is not made redundant by scale on this schema; it converts both
+models' residuals. Caveat: 100% ceilings on the toy DB sharpen the W1 distinguishability audit
+(Phase 9 Tier-1) — perfect scores are only as meaningful as the DB's ability to distinguish
+wrong SQL.
