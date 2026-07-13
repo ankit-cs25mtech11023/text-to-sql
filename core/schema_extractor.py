@@ -16,7 +16,7 @@ _RESERVED = {
 class SchemaExtractor:
     """Builds LLM schema context from the live DB across multiple PostgreSQL
     schemas. The set of tables exposed to the LLM is driven by the keys of the
-    descriptions JSON (schema-qualified, e.g. 'live_reports.r3b_...'), which
+    descriptions JSON (schema-qualified, e.g. 'public.tbl_gst_rtn_r3b'), which
     keeps DDL/sample-rows aligned with descriptions and automatically excludes
     partition children and LLM-HIDE columns."""
 

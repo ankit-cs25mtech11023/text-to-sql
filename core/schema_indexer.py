@@ -24,7 +24,7 @@ from core.schema_extractor import SchemaExtractor
 # The 3 MAIN tables (one per module) — always injected under always-core (RAG_plan §7).
 _CORE_TABLES = (
     "public.tbl_ewb_parta_ewb",
-    "live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned",
+    "public.tbl_gst_rtn_r3b",
     "public.tbl_gst_rtn_r7",
 )
 

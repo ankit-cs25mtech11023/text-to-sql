@@ -113,7 +113,7 @@ _FROM_TERMINATORS = {
 
 def _extract_table_names(stmt: Statement) -> set[str]:
     """Extract referenced table names, including schema-qualified dotted names
-    (e.g. 'public.tbl_x', 'live_reports.r3b_...'). After a FROM/JOIN keyword we
+    (e.g. 'public.tbl_x', 'common.mst_fy_years_t'). After a FROM/JOIN keyword we
     accumulate a Name (Punctuation '.' Name)* sequence into a single dotted
     identifier, then stop at the first non-identifier token (alias, '(', etc.).
 

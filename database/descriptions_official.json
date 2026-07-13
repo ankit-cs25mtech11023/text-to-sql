@@ -152,169 +152,254 @@
       "idtbl_ewb_partb_ewb": "FK to tbl_ewb_partb_ewb (Part-B main table)."
     }
   },
-  "live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned": {
-    "table_description": "GSTR-3B Monthly Summary Return — SINGLE denormalized flat table (a daily-refreshed materialized view), partitioned by fy_flag. One row per (gstin, ret_period) i.e. one filed GSTR-3B return. NEVER JOIN this table to itself or to any tbl_gst_rtn_r3b base table — all geo, taxpayer-master, supply, ITC, payment, RCM, and ECO fields are on the SAME ROW. The ONLY permitted joins are 1:1 decode lookups to common.mst_fy_years_t (fy_flag) and common.mst_3bd_months_t (ret_period). Tax-component column suffix convention across this table: *_samt=SGST, *_camt=CGST, *_iamt=IGST, *_csamt=Cess. For intra-state, SGST==CGST. ALWAYS add fy_flag=N in WHERE when a financial year is known (prunes the partition scan). For COUNT of taxpayers use COUNT(DISTINCT gstin); for COUNT of returns use COUNT(*).",
+  "public.tbl_gst_rtn_r3b": {
+    "table_description": "MAIN GSTR-3B table (Monthly Summary Return). One row = one filed return = one (gstin, ret_period). This is the ONLY table with gstin and ret_period; every section (supply / ITC / inward / payment) lives in child tables that reach the taxpayer+period by JOINing UP to this table via idtbl_gst_rtn_r3b (2-3 hops through a section parent). There is NO pre-computed rollup here: tax liability comes from the sup_details section tables, tax paid from the tx_pmt tables. For counting taxpayers use COUNT(DISTINCT gstin); for counting returns use COUNT(*). GEO decode: JOIN gstin = common.t_all_delers_api_v_t.gstin (name/status), then .stjd = common.mst_state_jurisdiction_code.state_jur_code for division/range/unit. FY/MONTH decode: JOIN ret_period = common.mst_3bd_months_t.ret_period_fl, then .fy_flag = common.mst_fy_years_t.flag_fy.",
     "columns": {
-      "division": "Top-level officer jurisdiction. E.g. 'Division 1 (ABD)'.",
-      "range": "Mid-level officer jurisdiction (under division). E.g. 'Range 1 (ABD)'. RESERVED WORD — MUST be double-quoted as \"range\".",
-      "unit": "Lowest-level officer jurisdiction (under range; aka 'Ghatak'). E.g. 'Ghatak 1 (ABD)'.",
-      "gstin": "15-char Taxpayer GSTIN. First 2 chars = state code. For counting taxpayers use COUNT(DISTINCT gstin).",
-      "trdnm": "Trade name / Firm name. Free-text — use ILIKE for partial matches.",
-      "lgnmbzpan": "Legal name (per PAN). Often differs from trdnm by branch/city suffix.",
-      "status": "Registration status. 'Active', 'Cancelled', 'Suspended'. For active-taxpayer queries use status='Active'.",
-      "rgfmdt": "Registration start date (native DATE). E.g. '2017-07-01'.",
-      "rgtodt": "Registration end date (native DATE). NULL for currently-active registrations.",
-      "appr_auth": "Approving authority / taxpayer type. 'CENTER' (Central jurisdiction) or 'STATE' (State jurisdiction). When officer asks 'all authorities', use ILIKE 'ALL'.",
-      "fil_dt": "Filing date — when the taxpayer filed this return (native DATE). Do NOT cast with TO_DATE.",
-      "ret_period": "Return period in MMYYYY format. Last 4 chars = CALENDAR year (Jan–Dec), NOT financial year. For calendar-year filter use ret_period LIKE '%2025'; for month use LIKE '04%'; NEVER use equality for year-only. For financial-year scoping use fy_flag. To display month name/quarter, LEFT JOIN common.mst_3bd_months_t ON ret_period_fl=ret_period.",
-      "mnth_id": "Cumulative month counter (chronological grouping across FYs). Increments monthly. Use for ORDER BY on multi-year timelines.",
-      "fy_flag": "FINANCIAL-year flag (Apr–Mar) AND partition key. 8=FY2024-25, 9=FY2025-26 (full mapping: 1=FY2017-18 … 11=FY2027-28). ALWAYS include fy_flag=N in WHERE when a financial year is named. Use in WHERE/GROUP BY/ORDER BY but do NOT project the raw integer — to display the FY, LEFT JOIN common.mst_fy_years_t ON flag_fy=fy_flag and project desc_year (e.g. '2024-25').",
-      "return_from_date": "Start DATE of the return period covered (not when filed). E.g. '2024-04-01'.",
-      "return_to_date": "End DATE of the return period covered. E.g. '2024-04-30'.",
-      "osup_det_txval": "Form 3.1(a). Total taxable value of regular outward taxable supplies (normal sales, excluding zero/nil/exempt/non-GST).",
-      "osup_det_samt": "SGST on regular outward supplies (intra-state).",
-      "osup_det_camt": "CGST on regular outward supplies (intra-state; equals SGST).",
-      "osup_det_iamt": "IGST on regular outward supplies (inter-state). >0 indicates inter-state activity.",
-      "osup_det_csamt": "Cess on regular outward supplies.",
-      "osup_zero_txval": "Form 3.1(b). Taxable value of zero-rated supplies (exports + SEZ). Zero-rated supplies get ITC benefit even at 0% output.",
-      "osup_zero_samt": "SGST on zero-rated supplies (usually 0).",
-      "osup_zero_camt": "CGST on zero-rated supplies (usually 0).",
-      "osup_zero_iamt": "IGST paid on zero-rated supplies (exports under 'with payment' route).",
-      "osup_zero_csamt": "Cess on zero-rated supplies.",
-      "osup_nil_exmp_txval": "Form 3.1(c). Taxable value of nil-rated and exempt outward supplies (e.g. basic food, education). No GST applies.",
-      "osup_nil_exmp_samt": "SGST on nil-rated/exempt supplies (always 0).",
-      "osup_nil_exmp_camt": "CGST on nil-rated/exempt supplies (always 0).",
-      "osup_nil_exmp_iamt": "IGST on nil-rated/exempt supplies (always 0).",
-      "osup_nil_exmp_csamt": "Cess on nil-rated/exempt supplies.",
-      "isup_rev_txval": "Form 3.1(d). Taxable value of inward supplies liable to REVERSE CHARGE — the taxpayer (buyer) pays GST on these, not the seller.",
-      "isup_rev_samt": "SGST on RCM inward supplies (buyer-paid).",
-      "isup_rev_camt": "CGST on RCM inward supplies (buyer-paid).",
-      "isup_rev_iamt": "IGST on RCM inward supplies (inter-state RCM).",
-      "isup_rev_csamt": "Cess on RCM inward supplies.",
-      "osup_nongst_txval": "Form 3.1(e). Taxable value of non-GST outward supplies (petrol, diesel, alcohol — outside GST regime). Tax intrinsically 0.",
-      "osup_nongst_samt": "SGST on non-GST supplies (always 0).",
-      "osup_nongst_camt": "CGST on non-GST supplies (always 0).",
-      "osup_nongst_iamt": "IGST on non-GST supplies (always 0).",
-      "osup_nongst_csamt": "Cess on non-GST supplies.",
-      "itc_avl_impg_samt": "Form 4(A)(1). SGST ITC available on imported goods (usually 0 — IGST is relevant for imports).",
-      "itc_avl_impg_iamt": "IGST ITC available on imported goods (customs IGST paid at port). >0 for importers.",
-      "itc_avl_impg_camt": "CGST ITC available on imported goods.",
-      "itc_avl_impg_csamt": "Cess ITC available on imported goods.",
-      "itc_avl_imps_samt": "Form 4(A)(2). SGST ITC available on imported services.",
-      "itc_avl_imps_iamt": "IGST ITC available on imported services (RCM on foreign providers).",
-      "itc_avl_imps_camt": "CGST ITC available on imported services.",
-      "itc_avl_imps_csamt": "Cess ITC available on imported services.",
-      "itc_avl_isrc_samt": "Form 4(A)(3). SGST ITC available on inward RCM supplies (mirror of isup_rev_samt — claimed back as ITC).",
-      "itc_avl_isrc_iamt": "IGST ITC available on inward RCM supplies.",
-      "itc_avl_isrc_camt": "CGST ITC available on inward RCM supplies.",
-      "itc_avl_isrc_csamt": "Cess ITC available on inward RCM supplies.",
-      "itc_avl_isd_samt": "Form 4(A)(4). SGST ITC available from ISD (Input Service Distributor).",
-      "itc_avl_isd_iamt": "IGST ITC available from ISD.",
-      "itc_avl_isd_camt": "CGST ITC available from ISD.",
-      "itc_avl_isd_csamt": "Cess ITC available from ISD.",
-      "itc_avl_oth_samt": "Form 4(A)(5). SGST ITC available — all other inward supplies (regular domestic purchases). For most taxpayers, the bulk of ITC is here.",
-      "itc_avl_oth_iamt": "IGST ITC available — all other (inter-state purchases).",
-      "itc_avl_oth_camt": "CGST ITC available — all other.",
-      "itc_avl_oth_csamt": "Cess ITC available — all other.",
-      "itc_rev_rul_samt": "Form 4(B)(1). SGST ITC reversed under Rules 38/42/43 + Sec 17(5).",
-      "itc_rev_rul_iamt": "IGST ITC reversed (rule-based).",
-      "itc_rev_rul_camt": "CGST ITC reversed (rule-based).",
-      "itc_rev_rul_csamt": "Cess ITC reversed (rule-based).",
-      "itc_rev_oth_samt": "Form 4(B)(2). SGST ITC reversed for other reasons.",
-      "itc_rev_oth_iamt": "IGST ITC reversed (other).",
-      "itc_rev_oth_camt": "CGST ITC reversed (other).",
-      "itc_rev_oth_csamt": "Cess ITC reversed (other).",
-      "itc_net_samt": "Form 4(C). Net SGST ITC available = (4A total) − (4B reversed). Use directly when asked 'net ITC'; do NOT re-derive.",
-      "itc_net_camt": "Net CGST ITC available.",
-      "itc_net_iamt": "Net IGST ITC available.",
-      "itc_net_csamt": "Net Cess ITC available.",
-      "itc_inelg_rul_camt": "Form 4(D)(1). CGST ITC reclaim (post-2022-07; pre-2022 these columns held Sec 17(5) ineligible values). Legacy column name.",
-      "itc_inelg_rul_csamt": "Cess ITC reclaim (Form 4(D)(1)).",
-      "itc_inelg_rul_samt": "SGST ITC reclaim (Form 4(D)(1)).",
-      "itc_inelg_rul_iamt": "IGST ITC reclaim (Form 4(D)(1)).",
-      "itc_inelg_oth_camt": "Form 4(D)(2). CGST ineligible ITC under Sec 16(4) / PoS restriction.",
-      "itc_inelg_oth_csamt": "Cess ineligible ITC (Form 4(D)(2)).",
-      "itc_inelg_oth_samt": "SGST ineligible ITC (Form 4(D)(2)).",
-      "itc_inelg_oth_iamt": "IGST ineligible ITC (Form 4(D)(2)).",
-      "gst_inter": "Form 5(1) Inter-State. Value of inter-state inward supplies from composition/exempt/nil-rated suppliers.",
-      "gst_intra": "Form 5(1) Intra-State. Value of intra-state inward supplies from composition/exempt/nil-rated suppliers.",
-      "non_gst_inter": "Form 5(2). Value of inter-state NON-GST inward supplies (petrol/alcohol from other states).",
-      "non_gst_intra": "Form 5(3). Value of intra-state NON-GST inward supplies.",
-      "itcsetoff_sgst_using_sgst": "SGST liability cleared using SGST credit (primary path).",
-      "itcsetoff_sgst_using_igst": "SGST liability cleared using IGST credit (when SGST credit insufficient; ADDS to state_income).",
-      "sgst_cashsetoff": "SGST liability paid in cash (when ITC insufficient).",
-      "s_intrpd": "SGST interest paid in cash (delayed filing).",
-      "s_lfeepd": "SGST late fee paid in cash.",
-      "itcsetoff_cgst_using_cgst": "CGST liability cleared using CGST credit.",
-      "itcsetoff_cgst_using_igst": "CGST liability cleared using IGST credit.",
-      "cgst_cashsetoff": "CGST liability paid in cash.",
-      "c_intrpd": "CGST interest paid in cash.",
-      "c_lfeepd": "CGST late fee paid in cash.",
-      "itcsetoff_igst_using_sgst": "IGST liability cleared using SGST credit (SUBTRACTS from state_income — SGST outflow).",
-      "itcsetoff_igst_using_cgst": "IGST liability cleared using CGST credit.",
-      "itcsetoff_igst_using_igst": "IGST liability cleared using IGST credit (primary path for inter-state).",
-      "igst_cashsetoff": "IGST liability paid in cash.",
-      "i_intrpd": "IGST interest paid in cash.",
-      "i_lfeepd": "IGST late fee paid in cash.",
-      "itcsetoff_cess_using_cess": "Cess liability cleared using Cess credit (only cross-utilization allowed for cess).",
-      "cs_intrpd": "Cess interest paid in cash.",
-      "cs_lfeepd": "Cess late fee paid in cash.",
-      "cess_cashsetoff": "Cess liability paid in cash.",
-      "samt": "TOTAL SGST tax payable this period (rollup of 3.1 outward + 3.1(d) RCM SGST). Shown as 'Tax payable' in Form 6.1. Not to be confused with osup_det_samt (the per-section breakdown).",
-      "camt": "TOTAL CGST tax payable this period (rollup). Shown as 'Tax payable' in Form 6.1.",
-      "iamt": "TOTAL IGST tax payable this period (rollup). Shown as 'Tax payable' in Form 6.1.",
-      "csamt": "TOTAL Cess payable this period (rollup).",
-      "state_income": "Net SGST income to the state for this return (pre-computed KPI = SGST cash + interest + late fee + SGST-via-IGST credit − IGST-via-SGST credit). Use DIRECTLY when officer asks 'state income' / 'SGST revenue' / 'net SGST to state'; do NOT re-derive.",
-      "igst_cashsetoff_rcm": "Form 6.1(B). IGST paid in cash for RCM liability.",
-      "cgst_cashsetoff_rcm": "CGST paid in cash for RCM liability.",
-      "sgst_cashsetoff_rcm": "SGST paid in cash for RCM liability.",
-      "cess_cashsetoff_rcm": "Cess paid in cash for RCM liability.",
-      "i_intrpd_rcm": "IGST interest paid in cash for RCM.",
-      "c_intrpd_rcm": "CGST interest paid in cash for RCM.",
-      "s_intrpd_rcm": "SGST interest paid in cash for RCM.",
-      "cs_intrpd_rcm": "Cess interest paid in cash for RCM.",
-      "s_lfeepd_rcm": "SGST late fee paid in cash for RCM.",
-      "c_lfeepd_rcm": "CGST late fee paid in cash for RCM.",
-      "i_lfeepd_rcm": "IGST late fee paid in cash for RCM.",
-      "cs_lfeepd_rcm": "Cess late fee paid in cash for RCM.",
-      "igst_cashsetoff_wo_rcm": "Form 6.1(A). IGST paid in cash for non-RCM (regular) liability. row-root cash = rcm + wo_rcm.",
-      "cgst_cashsetoff_wo_rcm": "CGST paid in cash for non-RCM liability.",
-      "sgst_cashsetoff_wo_rcm": "SGST paid in cash for non-RCM liability.",
-      "cess_cashsetoff_wo_rcm": "Cess paid in cash for non-RCM liability.",
-      "i_intrpd_wo_rcm": "IGST interest paid in cash for non-RCM.",
-      "c_intrpd_wo_rcm": "CGST interest paid in cash for non-RCM.",
-      "s_intrpd_wo_rcm": "SGST interest paid in cash for non-RCM.",
-      "cs_intrpd_wo_rcm": "Cess interest paid in cash for non-RCM.",
-      "s_lfeepd_wo_rcm": "SGST late fee paid in cash for non-RCM.",
-      "c_lfeepd_wo_rcm": "CGST late fee paid in cash for non-RCM.",
-      "i_lfeepd_wo_rcm": "IGST late fee paid in cash for non-RCM.",
-      "cs_lfeepd_wo_rcm": "Cess late fee paid in cash for non-RCM.",
-      "eco_sup_txval": "Form 3.1.1(i). Taxable value of supplies on which the E-Commerce Operator pays tax (Sec 9(5)). >0 for restaurants on Swiggy/Zomato, cabs on Ola/Uber, etc.",
-      "eco_sup_sgst": "SGST on ECO-tax supplies (paid by ECO).",
-      "eco_sup_cgst": "CGST on ECO-tax supplies.",
-      "eco_sup_igst": "IGST on ECO-tax supplies.",
-      "eco_sup_cess": "Cess on ECO-tax supplies.",
-      "eco_reg_sup_txval": "Form 3.1.1(ii). Taxable value of supplies the registered taxpayer made THROUGH an ECO (tax paid by taxpayer, not ECO). Distinct from eco_sup_* where ECO pays.",
-      "eco_reg_sup_sgst": "SGST on registered-via-ECO supplies.",
-      "eco_reg_sup_cgst": "CGST on registered-via-ECO supplies.",
-      "eco_reg_sup_igst": "IGST on registered-via-ECO supplies.",
-      "eco_reg_sup_cess": "Cess on registered-via-ECO supplies.",
-      "current_date": "MV refresh stamp — the date this row was last refreshed by the DBA pipeline. RESERVED WORD — MUST be double-quoted as \"current_date\". NOT the return-period date."
+      "idtbl_gst_rtn_r3b": "Primary key (internal return ID). JOIN KEY: every section parent (inward_sup, itc_elg, sup_details, tx_pmt) references this to reach gstin/ret_period.",
+      "gstin": "15-char taxpayer GSTIN. First 2 chars = state code. This column exists ONLY in this table. For counting taxpayers use COUNT(DISTINCT gstin). JOIN to common.t_all_delers_api_v_t.gstin for trade/legal name, status, and (via stjd) jurisdiction.",
+      "ret_period": "Return period in MMYYYY (VARCHAR). Sample: '042024'=Apr 2024, '122025'=Dec 2025. YEAR=last 4 chars, MONTH=first 2. For 'year 2025' use ret_period LIKE '%2025'; for 'April' use LIKE '04%'; NEVER equality for year-only. For MONTH name / QUARTER / financial-year scoping, LEFT JOIN common.mst_3bd_months_t ON ret_period_fl = ret_period (join on ret_period_fl, the zero-padded VARCHAR — NOT mst_3bd_months_t.ret_period, which is an INTEGER with the leading zero dropped).",
+      "fil_dt": "Filing date in DD-MM-YYYY (VARCHAR). Sample: '18-02-2026'. Use TO_DATE(fil_dt,'DD-MM-YYYY') for date math.",
+      "process_date": "Backend processing date in YYYY-MM-DD (ISO, VARCHAR). Sample: '2026-02-18'. Different format from fil_dt — do NOT mix.",
+      "process_no": "Processing batch number (VARCHAR). Sample: '38'."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_inward_sup": {
+    "table_description": "Linking PARENT for the inward-supplies section (no amounts). JOIN idtbl_gst_rtn_r3b to the main table; the isup_details child joins here.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_inward_sup": "Primary key. Referenced by tbl_gst_rtn_r3b_inward_sup_isup_details.",
+      "idtbl_gst_rtn_r3b": "FK to tbl_gst_rtn_r3b. JOIN through this to reach gstin / ret_period."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_inward_sup_isup_details": {
+    "table_description": "Inward-supplies details (composition/nil-rated/exempt purchases + non-GST purchases). Two rows per return: ty='GST' and ty='NONGST'. JOIN via idtbl_gst_rtn_r3b_inward_sup to the inward_sup parent, then to main for gstin.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_inward_sup_isup_details": "Primary key.",
+      "ty": "Type of inward supply. ENUM, two values: 'GST' (composition/nil/exempt purchases) and 'NONGST' (purchases outside GST scope, e.g. petrol, alcohol).",
+      "inter": "Inter-State inward supplies value (purchases from other states).",
+      "intra": "Intra-State inward supplies value (purchases within the same state).",
+      "idtbl_gst_rtn_r3b_inward_sup": "FK to tbl_gst_rtn_r3b_inward_sup. JOIN up through inward_sup then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_itc_elg": {
+    "table_description": "Linking PARENT for the ITC (Input Tax Credit) section (no amounts). Bridges the main table to all ITC detail tables (itc_avl, itc_rev, itc_inelg, itc_net). JOIN idtbl_gst_rtn_r3b to main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_itc_elg": "Primary key. Referenced by the four ITC detail tables.",
+      "idtbl_gst_rtn_r3b": "FK to tbl_gst_rtn_r3b. JOIN through this to reach gstin / ret_period."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_itc_elg_itc_avl": {
+    "table_description": "ITC AVAILABLE (Form 4A) — credit the taxpayer can claim. MULTIPLE rows per return, one per ty. For 'ITC available/claimed' SUM iamt/camt/samt/csamt across rows (most taxpayers populate ty='OTH' only). JOIN via idtbl_gst_rtn_r3b_itc_elg to itc_elg, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_itc_elg_itc_avl": "Primary key.",
+      "ty": "Type of ITC available. ENUM: 'IMPG'=Import of Goods, 'IMPS'=Import of Services, 'ISRC'=Inward supplies liable to Reverse Charge, 'ISD'=Input Service Distributor credit, 'OTH'=all other ITC (the bulk for most taxpayers).",
+      "iamt": "IGST available (inter-state purchases).",
+      "camt": "CGST available (central portion of intra-state).",
+      "samt": "SGST available (state portion of intra-state).",
+      "csamt": "Cess available.",
+      "idtbl_gst_rtn_r3b_itc_elg": "FK to tbl_gst_rtn_r3b_itc_elg. JOIN up through itc_elg then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_itc_elg_itc_inelg": {
+    "table_description": "ITC INELIGIBLE (Form 4D) — blocked credit that CANNOT be claimed. Two rows per return (ty RUL/OTH). Almost always 0. JOIN via idtbl_gst_rtn_r3b_itc_elg to itc_elg, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_itc_elg_itc_inelg": "Primary key.",
+      "ty": "Type of ineligible ITC. ENUM: 'RUL' (Sec 17(5) blocked / Rule 42-43 reversal) and 'OTH' (other ineligible).",
+      "iamt": "IGST ineligible amount.",
+      "camt": "CGST ineligible amount.",
+      "samt": "SGST ineligible amount.",
+      "csamt": "Cess ineligible amount.",
+      "idtbl_gst_rtn_r3b_itc_elg": "FK to tbl_gst_rtn_r3b_itc_elg. JOIN up through itc_elg then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_itc_elg_itc_net": {
+    "table_description": "NET ITC available (Form 4C) — final claimable credit after adjustments (available minus reversed/ineligible). ONE row per return (no ty partitioning). For 'net ITC' project/SUM iamt/camt/samt/csamt HERE directly; do NOT re-derive from avl-rev. JOIN via idtbl_gst_rtn_r3b_itc_elg to itc_elg, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_itc_elg_itc_net": "Primary key.",
+      "iamt": "IGST net available.",
+      "camt": "CGST net available. Sample: 990.00, 67900.00.",
+      "samt": "SGST net available.",
+      "csamt": "Cess net available.",
+      "idtbl_gst_rtn_r3b_itc_elg": "FK to tbl_gst_rtn_r3b_itc_elg. JOIN up through itc_elg then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_itc_elg_itc_rev": {
+    "table_description": "ITC REVERSED (Form 4B) — credit taken back by the taxpayer. Two rows per return (ty RUL/OTH). Usually 0. JOIN via idtbl_gst_rtn_r3b_itc_elg to itc_elg, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_itc_elg_itc_rev": "Primary key.",
+      "ty": "Reason for reversal. ENUM: 'RUL' (Rule 42-43 proportional reversal for exempt/personal use) and 'OTH' (other reversals).",
+      "iamt": "IGST reversed amount.",
+      "camt": "CGST reversed amount.",
+      "samt": "SGST reversed amount.",
+      "csamt": "Cess reversed amount.",
+      "idtbl_gst_rtn_r3b_itc_elg": "FK to tbl_gst_rtn_r3b_itc_elg. JOIN up through itc_elg then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details": {
+    "table_description": "Linking PARENT for the supply-details section (no amounts). Bridges the main table to the five supply detail tables (osupdet, osupzero, osupnilexmp, osupnongst, isuprev). JOIN idtbl_gst_rtn_r3b to main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details": "Primary key. Referenced by the five supply detail tables.",
+      "idtbl_gst_rtn_r3b": "FK to tbl_gst_rtn_r3b. JOIN through this to reach gstin / ret_period."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details_osupdet": {
+    "table_description": "OUTWARD TAXABLE supplies / liability (Form 3.1(a)) — regular taxable SALES, excluding zero-rated / nil / exempt / non-GST. This is the TURNOVER table: for 'turnover'/'taxable sales'/'outward supplies value' use txval; for 'outward tax liability' use iamt+camt+samt. One row per return. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main. (Distinct from the four sibling section tables below, which share the same columns but a different supply class.)",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details_osupdet": "Primary key.",
+      "txval": "Taxable turnover value of regular outward supplies (sales). Sample: 540330.64, 1219448.00.",
+      "iamt": "IGST liability on inter-state sales. iamt>0 indicates inter-state activity.",
+      "camt": "CGST liability on intra-state sales.",
+      "samt": "SGST liability on intra-state sales.",
+      "csamt": "Cess liability on sales.",
+      "idtbl_gst_rtn_r3b_sup_details": "FK to tbl_gst_rtn_r3b_sup_details. JOIN up through sup_details then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details_osupzero": {
+    "table_description": "ZERO-RATED outward supplies (Form 3.1(b)) — EXPORTS + SEZ supplies (taxed 0% but ITC-eligible). One row per return. Use for 'exports'/'zero-rated', NOT for regular sales (that is osupdet). Same columns as the other section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details_osupzero": "Primary key.",
+      "txval": "Taxable value of zero-rated supplies (exports + SEZ).",
+      "iamt": "IGST paid on exports (with-payment route).",
+      "camt": "CGST amount.",
+      "samt": "SGST amount.",
+      "csamt": "Cess amount.",
+      "idtbl_gst_rtn_r3b_sup_details": "FK to tbl_gst_rtn_r3b_sup_details. JOIN up through sup_details then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details_osupnilexmp": {
+    "table_description": "NIL-RATED & EXEMPT outward supplies (Form 3.1(c)) — sales at 0% or exempt from GST (basic food, education, etc.). One row per return. Tax columns are always 0. Same columns as the other section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details_osupnilexmp": "Primary key.",
+      "txval": "Taxable value of nil-rated/exempt supplies.",
+      "iamt": "IGST amount (always 0).",
+      "camt": "CGST amount (always 0).",
+      "samt": "SGST amount (always 0).",
+      "csamt": "Cess amount.",
+      "idtbl_gst_rtn_r3b_sup_details": "FK to tbl_gst_rtn_r3b_sup_details. JOIN up through sup_details then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details_osupnongst": {
+    "table_description": "NON-GST outward supplies (Form 3.1(e)) — sales outside the GST regime (petrol, diesel, alcohol). One row per return. Tax intrinsically 0. Same columns as the other section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details_osupnongst": "Primary key.",
+      "txval": "Taxable value of non-GST supplies.",
+      "iamt": "IGST amount (always 0).",
+      "camt": "CGST amount (always 0).",
+      "samt": "SGST amount (always 0).",
+      "csamt": "Cess amount.",
+      "idtbl_gst_rtn_r3b_sup_details": "FK to tbl_gst_rtn_r3b_sup_details. JOIN up through sup_details then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_sup_details_isuprev": {
+    "table_description": "Inward supplies under REVERSE CHARGE (Form 3.1(d)) — purchases where the buyer pays GST instead of the seller. One row per return. This is the RCM liability row inside sup_details; distinct from itc_avl ty='ISRC' (the same tax claimed BACK as ITC). Same columns as the outward section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_sup_details_isuprev": "Primary key.",
+      "txval": "Taxable value of inward supplies liable to reverse charge.",
+      "iamt": "IGST amount (buyer-paid RCM).",
+      "camt": "CGST amount (buyer-paid RCM).",
+      "samt": "SGST amount (buyer-paid RCM).",
+      "csamt": "Cess amount.",
+      "idtbl_gst_rtn_r3b_sup_details": "FK to tbl_gst_rtn_r3b_sup_details. JOIN up through sup_details then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_tx_pmt": {
+    "table_description": "Linking PARENT for the tax-payment section (no amounts). Bridges the main table to pd_cash and pd_itc. JOIN idtbl_gst_rtn_r3b to main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_tx_pmt": "Primary key. Referenced by pd_cash and pd_itc.",
+      "idtbl_gst_rtn_r3b": "FK to tbl_gst_rtn_r3b. JOIN through this to reach gstin / ret_period."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_tx_pmt_pd_cash": {
+    "table_description": "Tax paid via the CASH ledger — direct payments from the electronic cash ledger. MULTIPLE rows per return (one per liability line liab_ldg_id). trans_typ '30002'=tax, '30003'=interest/late-fee/penalty. For 'tax paid in cash' SUM ipd+cpd+spd+cspd (add WHERE trans_typ='30002' to exclude interest/penalty). JOIN via idtbl_gst_rtn_r3b_tx_pmt to tx_pmt, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_tx_pmt_pd_cash": "Primary key.",
+      "liab_ldg_id": "Liability ledger ID (numeric string) identifying the obligation being paid. Sample: '975974661'.",
+      "trans_typ": "Transaction type code (VARCHAR). ENUM: '30002'=regular tax payment, '30003'=interest / late fee / penalty.",
+      "ipd": "IGST paid via cash.",
+      "cpd": "CGST paid via cash.",
+      "spd": "SGST paid via cash.",
+      "cspd": "Cess paid via cash.",
+      "i_intrpd": "IGST interest paid.",
+      "c_intrpd": "CGST interest paid.",
+      "s_intrpd": "SGST interest paid.",
+      "cs_intrpd": "Cess interest paid.",
+      "i_lfeepd": "IGST late fee paid.",
+      "c_lfeepd": "CGST late fee paid.",
+      "s_lfeepd": "SGST late fee paid.",
+      "cs_lfeepd": "Cess late fee paid.",
+      "idtbl_gst_rtn_r3b_tx_pmt": "FK to tbl_gst_rtn_r3b_tx_pmt. JOIN up through tx_pmt then main for gstin."
+    }
+  },
+  "public.tbl_gst_rtn_r3b_tx_pmt_pd_itc": {
+    "table_description": "Tax paid via ITC — liability offset using available credit. MULTIPLE rows per return (one per liability line). Cross-credit columns: i_pdc = IGST liability paid using CGST credit, etc. (first letter = liability head, last letter = credit head used). For 'tax paid through ITC' SUM the *_pd* columns. JOIN via idtbl_gst_rtn_r3b_tx_pmt to tx_pmt, then main.",
+    "columns": {
+      "idtbl_gst_rtn_r3b_tx_pmt_pd_itc": "Primary key.",
+      "liab_ldg_id": "Liability ledger ID (numeric string). Same series as pd_cash.",
+      "trans_typ": "Transaction type code. Almost always '30002' (interest/penalty cannot be paid by ITC).",
+      "i_pdi": "IGST liability paid using IGST credit.",
+      "i_pdc": "IGST liability paid using CGST credit.",
+      "i_pds": "IGST liability paid using SGST credit.",
+      "c_pdi": "CGST liability paid using IGST credit.",
+      "c_pdc": "CGST liability paid using CGST credit.",
+      "s_pdi": "SGST liability paid using IGST credit.",
+      "s_pds": "SGST liability paid using SGST credit.",
+      "cs_pdcs": "Cess liability paid using Cess credit.",
+      "idtbl_gst_rtn_r3b_tx_pmt": "FK to tbl_gst_rtn_r3b_tx_pmt. JOIN up through tx_pmt then main for gstin."
+    }
+  },
+  "common.t_all_delers_api_v_t": {
+    "table_description": "Taxpayer / GSTIN REGISTRATION master (dealer master) — ONE ROW PER GSTIN (UNIQUE gstin; a plain master, NOT a partitioned view). Supplies taxpayer IDENTITY (trade/legal name), STATUS, registration/cancellation dates, registration type, and the GEO decode for the fact modules. JOIN gstin to a fact table's taxpayer GSTIN: public.tbl_gst_rtn_r3b.gstin (GSTR-3B), public.tbl_gst_rtn_r7.gstin (GSTR-7 deductor), or EWB frgstin/togstin/usergstin. For JURISDICTION display, JOIN stjd = common.mst_state_jurisdiction_code.state_jur_code and PROJECT division/range/unit (never the raw stjd code). 'Active' taxpayers = canc_dt IS NULL; 'cancelled' = canc_dt IS NOT NULL. Several columns are coded (authstatus, cobz, psnt, regtypecd, regtype) — their decode masters are NOT loaded; read the code per its comment, do NOT invent a decode join.",
+    "columns": {
+      "gstin": "15-char GSTIN (state code + PAN + suffix). UNIQUE — one row per taxpayer. Sample: '24AABCE0002E9AA'. JOIN KEY to the fact modules' taxpayer GSTIN.",
+      "pan_num": "10-char PAN of the taxpayer. Sample: 'AMCPA4567V'.",
+      "lgnmbzpan": "LEGAL / registered name of the firm (per PAN). For a company/firm NAME filter, match this with ILIKE (case-insensitive partial) OR'd with trdnm — the name may sit in either column. Sample: 'Rashtriya Ispath Nigam Ltd'.",
+      "trdnm": "TRADE name (brand / operating name) — a firm NAME, NOT a business category. Primary column for company/'trade name' filters: ILIKE and OR with lgnmbzpan. Sample: 'Vizag Steel'.",
+      "stcd": "State code (2-char). Sample: '24'=Gujarat, '29'=Karnataka.",
+      "appr_auth": "Approving authority: 'CENTER' or 'STATE' (or NULL). Note: stjd alone does not indicate center-vs-state.",
+      "stjd": "State jurisdiction code — JOIN KEY to common.mst_state_jurisdiction_code.state_jur_code for division/range/unit. Sample: 'GJ063'. Do NOT project this raw code when the officer wants a jurisdiction NAME.",
+      "rgfmdt": "GST registration START date (DATE).",
+      "apprvdt": "GST registration APPROVED date (DATE).",
+      "rgtodt": "GST registration END date (DATE). NULL for currently-registered taxpayers.",
+      "canc_dt": "GST CANCELLATION date (DATE). NULL = active/not cancelled; NOT NULL = cancelled. Use for 'active' (IS NULL) vs 'cancelled' (IS NOT NULL) taxpayers.",
+      "authstatus": "Registration status CODE. Sample: 'A' (active), 'SC', 'CBT'. Coded — decode master NOT loaded; read as-is, do NOT invent a join.",
+      "regtypecd": "Registration type CODE. E.g. 'NT'/'TP'=Normal, 'CO'=Composition, 'ID'=ISD, 'NRTP'=Non-Resident, 'TD'=TDS, 'TC'=TCS, 'CA'=Casual, 'REGTM'=Temporary.",
+      "regtype": "GST registration type (verbose). E.g. 'R'=Regular, 'O'=Composition, 'NRTP', 'TDS', 'TCS', 'SUO MOTO'.",
+      "cobz": "Constitution of business CODE. Sample: 'PRO' (proprietorship), 'PAR' (partnership), 'SCT'. Coded — decode master NOT loaded.",
+      "psnt": "Nature of premises possession CODE. Sample: 'OWN', 'REN'/'RENT', 'CON' (consent). Coded — decode master NOT loaded.",
+      "ntcrbs": "Nature of CORE business activity — the activity CATEGORY (Manufacturer/Retailer/Trader/Wholesaler/Service Provider/Distributor). NOT the firm's name — never filter a taxpayer/trade NAME here (use trdnm/lgnmbzpan).",
+      "address": "Address of the taxpayer (free-text).",
+      "email": "Contact email. Sample: 'abc123@gmail.com'.",
+      "mobile": "Contact mobile number. Sample: '9988774455'.",
+      "risk_profile": "Risk profile label. Sample: 'MEDIUM_RISK(5.00)', 'LOW_RISK(1.00)', 'NA'.",
+      "can_type": "Cancellation type. Sample: 'Suo-moto Cancellation', 'Voluntary Cancellation'. Populated only for cancelled taxpayers.",
+      "can_reasons": "Cancellation reason (free-text). Populated only for cancelled taxpayers."
+    }
+  },
+  "common.mst_state_jurisdiction_code": {
+    "table_description": "Jurisdiction DECODE master: state_jur_code -> division / range / unit (officer-readable jurisdiction names). 1:1 lookup (UNIQUE state_jur_code). LEFT JOIN target only: common.t_all_delers_api_v_t.stjd = state_jur_code. PROJECT division/range/unit for officer-facing jurisdiction; never the raw code.",
+    "columns": {
+      "state_jur_code": "JOIN KEY <-> t_all_delers_api_v_t.stjd. Sample: 'GJ041', 'GJ018'.",
+      "division": "Division NAME — top-level officer jurisdiction. Project for 'division'. Sample: 'Division 5 (VAD)'.",
+      "range": "Range NAME — mid-level officer jurisdiction (under division). Project for 'range'. Sample: 'Range 10 (VAD)'. RESERVED WORD — reference as \"range\" (double-quoted) or PostgreSQL folds/errors.",
+      "unit": "Unit NAME — lowest-level officer jurisdiction (under range; aka 'Ghatak'). Project for 'unit'/'ghatak'. Sample: 'Ghatak 41 (VAD)'. Can filter with unit ILIKE 'Ghatak 41 (%'.",
+      "record_status": "Row status. 'A'=active."
     }
   },
   "common.mst_fy_years_t": {
-    "table_description": "Decode/master lookup: maps the GSTR-3B fy_flag integer to a human-readable financial-year label. LEFT JOIN target only (1:1, never multiplies rows). Join: r3b...partitioned.fy_flag = mst_fy_years_t.flag_fy.",
+    "table_description": "Decode master: financial-year flag -> FY label. 1:1 lookup (UNIQUE flag_fy), LEFT JOIN target only. NO fact table carries fy_flag directly anymore — reach it through the MONTH master: JOIN tbl_gst_rtn_r3b.ret_period = common.mst_3bd_months_t.ret_period_fl, then common.mst_3bd_months_t.fy_flag = mst_fy_years_t.flag_fy. Project desc_year (AS financial_year) for display; use flag_fy for WHERE/GROUP BY/ORDER BY.",
     "columns": {
-      "flag_fy": "Financial-year flag integer (matches r3b table fy_flag). E.g. 8, 9.",
-      "desc_year": "Human-readable financial year label. E.g. '2024-25', '2025-26'. Project this AS financial_year."
+      "flag_fy": "Financial-year flag integer. JOIN KEY <-> mst_3bd_months_t.fy_flag. Sample: 8=FY2024-25, 9=FY2025-26 (domain 1=FY2017-18 ... 11=FY2027-28).",
+      "desc_year": "Financial-year LABEL for display. Sample: '2024-25', '2025-26'. Project THIS (AS financial_year) in place of the raw flag."
     }
   },
   "common.mst_3bd_months_t": {
-    "table_description": "Decode/master lookup: maps the GSTR-3B ret_period (MMYYYY) to month name and quarter. LEFT JOIN target only (1:1). Join: r3b...partitioned.ret_period = mst_3bd_months_t.ret_period_fl.",
+    "table_description": "Decode master: return period (MMYYYY) -> month name / quarter, AND the AUTHORITATIVE month->financial-year mapping. 1:1 lookup (UNIQUE ret_period_fl), LEFT JOIN target only. JOIN tbl_gst_rtn_r3b.ret_period = ret_period_fl (the zero-padded VARCHAR). Carries fy_flag -> chain to mst_fy_years_t.flag_fy for the FY label. Use fy_flag for financial-year scoping (Apr-Mar); NEVER derive FY from the calendar year inside ret_period — e.g. ret_period '032025' (March 2025) is fy_flag 8 = FY2024-25, not calendar 2025.",
     "columns": {
-      "ret_period_fl": "Return period in MMYYYY (matches r3b table ret_period). E.g. '042024'.",
-      "month_desc": "Month name. E.g. 'April', 'May'.",
-      "quarter": "Fiscal quarter label. E.g. 'Q1', 'Q2'."
+      "ret_period_fl": "Return period MMYYYY, zero-padded VARCHAR. JOIN KEY <-> tbl_gst_rtn_r3b.ret_period. Sample: '032026', '122025'.",
+      "month_desc": "Month NAME for display. Sample: 'March', 'January', 'April'. Project THIS for the month label.",
+      "mnth_cd": "Calendar month number 1-12. Sample: 3=March, 1=January. Use for chronological month sort within a financial year.",
+      "quarter": "GST quarter label, populated ONLY on the quarter's CLOSING month (Jun->Q1, Sep->Q2, Dec->Q3, Mar->Q4); blank on the other two months. For an every-row quarter key use quarter_all_mnths.",
+      "quarter_all_mnths": "Quarter key present on EVERY month: the MMYYYY of the quarter's closing month (Jan/Feb/Mar 2026 all -> '032026'). Use to GROUP BY quarter across all three months.",
+      "fy_flag": "Financial-year flag for this return period. JOIN KEY <-> mst_fy_years_t.flag_fy. Sample: 9=FY2025-26. Authoritative month->FY mapping (resolves the calendar-vs-FY boundary)."
     }
   },
   "public.tbl_gst_rtn_r7": {

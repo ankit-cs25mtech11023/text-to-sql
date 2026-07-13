@@ -5,7 +5,7 @@ Rules:
 - Output ONLY the SQL query, nothing else — no explanations, no markdown, no prose
 - Use only SELECT statements (no INSERT, UPDATE, DELETE, DROP, etc.)
 - This is PostgreSQL: ILIKE, TO_DATE, TO_TIMESTAMP, DATE_TRUNC are available
-- ALWAYS schema-qualify tables: public.<table>, live_reports.<table>, common.<table>
+- ALWAYS schema-qualify tables: public.<table>, common.<table>
 - Qualify columns with table aliases to avoid ambiguity
 - LIMIT results to 100 rows unless the question asks for all or a specific count
 
@@ -37,16 +37,19 @@ HOW TO BUILD THE QUERY — reason through these steps before writing SQL:
 
 IDENTIFIER QUOTING (these columns MUST be double-quoted exactly, else the query fails):
 - EWB: "InvVal", "QtyUqc"
-- GSTR-3B: "range", "current_date"
+- Jurisdiction master (common.mst_state_jurisdiction_code): "range" (reserved word)
 
 DATE / FORMAT CONVENTIONS (data quirks — read carefully):
 - Return periods (ret_period, fp, omonth) are VARCHAR in MMYYYY format. Year = last 4 chars,
   month = first 2. For a YEAR use LIKE '%2025'; for a MONTH use LIKE '04%'. NEVER use equality
-  for a year-only filter. For GSTR-3B FINANCIAL-year scoping, use fy_flag (see below), not ret_period.
+  for a year-only filter. For GSTR-3B FINANCIAL-year scoping, JOIN ret_period to
+  common.mst_3bd_months_t and filter fy_flag (see below) — never the calendar year in ret_period.
 - EWB timestamps (ewbdt, ewbvaliddt, upddt, canceldt, ...) are VARCHAR 'DD/MM/YYYY HH:MM:SS AM/PM'.
   Use TO_TIMESTAMP(col, 'DD/MM/YYYY HH12:MI:SS AM') for date math.
-- GSTR-7 fil_dt / trandate are VARCHAR 'DD-MM-YYYY'. Use TO_DATE(col, 'DD-MM-YYYY').
-- GSTR-3B fil_dt, rgfmdt, return_from_date, etc. are NATIVE DATE — compare directly, do NOT use TO_DATE.
+- GSTR-7 fil_dt / trandate AND GSTR-3B fil_dt are VARCHAR 'DD-MM-YYYY'. Use TO_DATE(col, 'DD-MM-YYYY').
+  (GSTR-3B process_date is VARCHAR 'YYYY-MM-DD' — a different format; do NOT mix the two.)
+- Registration dates (rgfmdt, apprvdt, rgtodt, canc_dt) in common.t_all_delers_api_v_t are NATIVE
+  DATE — compare directly, do NOT use TO_DATE.
 - Some code columns are PADDED with trailing spaces (ssuptyp, transmode, updid). TRIM() before
   comparing, or use LIKE 'x%'.
 - Numeric-looking strings stored as VARCHAR (travdist, qty, remdist) — CAST to numeric for math.
@@ -71,21 +74,33 @@ MODULE 1 — EWB (E-Way Bill: statutory document for goods movement). Schema: pu
       ...partbdet (vehicle), ...canceldet (cancellations), ...extenddet (extensions),
       ...rejdtl (rejections), ...transdet (transporter changes) → all FK idtbl_ewb_partb_ewb
 
-MODULE 2 — GSTR-3B (Monthly Summary Return). Schema: live_reports.
-  live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned : SINGLE denormalized flat table.
-    - One row per (gstin, ret_period) = one filed monthly return. NEVER self-join or join to any
-      base table — every field (geo, taxpayer master, supplies, ITC, payments, RCM, ECO,
-      state_income) is on ONE row.
-    - GRAIN WARNING: a taxpayer files ONE row PER ret_period → MANY rows per financial year. For
-      per-taxpayer or per-FY totals/rankings, SUM(<col>) GROUP BY gstin (a single row is one
-      MONTH, never the taxpayer's yearly total). "Top taxpayers by X" = SUM(X) GROUP BY gstin.
-    - PARTITIONED by fy_flag. ALWAYS add `fy_flag = N` in WHERE when a financial year is named
-      (8 = FY2024-25, 9 = FY2025-26). This prunes the partition scan.
-    - COUNT taxpayers → COUNT(DISTINCT gstin). COUNT returns filed → COUNT(*).
-    - The ONLY allowed joins are 1:1 decode lookups:
-        common.mst_fy_years_t  (flag_fy = fy_flag)        → desc_year e.g. '2024-25'
-        common.mst_3bd_months_t (ret_period_fl = ret_period) → month_desc, quarter
-    - state_income is a pre-computed KPI — use it directly when asked "state income / SGST revenue".
+MODULE 2 — GSTR-3B (Monthly Summary Return). Schema: public (facts) + common (masters).
+  NORMALIZED across 17 tables. The MAIN table is the ONLY one with gstin + ret_period; every
+  section lives in a child table reached by JOINing UP via idtbl_gst_rtn_r3b through a section
+  parent (2-3 hops). There is NO flat rollup row — liability comes from the sup_details section
+  tables, ITC from the itc_elg tables, payments from the tx_pmt tables.
+    public.tbl_gst_rtn_r3b            : MAIN — one row per (gstin, ret_period) = one filed return.
+                                        COUNT(*) = returns filed; COUNT(DISTINCT gstin) = taxpayers.
+    Section PARENTS (linking, no amounts; each has idtbl_gst_rtn_r3b FK to MAIN + its own PK):
+      _sup_details, _itc_elg, _inward_sup, _tx_pmt
+    Supply LEAVES (FK idtbl_gst_rtn_r3b_sup_details), all sharing txval/iamt/camt/samt/csamt —
+      pick the leaf by supply CLASS, not by column:
+        _osupdet (regular outward TAXABLE = turnover/sales), _osupzero (exports/SEZ),
+        _osupnilexmp (nil/exempt), _osupnongst (non-GST), _isuprev (inward reverse-charge)
+    ITC LEAVES (FK idtbl_gst_rtn_r3b_itc_elg): _itc_avl (available; MANY rows by ty),
+      _itc_net (NET, one row — use directly for "net ITC"), _itc_rev (reversed), _itc_inelg (ineligible)
+    PAYMENT LEAVES (FK idtbl_gst_rtn_r3b_tx_pmt): _pd_cash (paid via cash), _pd_itc (paid via credit)
+    - GRAIN: a taxpayer files ONE return PER ret_period → MANY per financial year. For per-taxpayer
+      or per-FY totals/rankings, SUM(<col>) GROUP BY gstin.
+    - FINANCIAL-YEAR scoping is a JOIN, not a column: JOIN common.mst_3bd_months_t ON ret_period_fl =
+      r.ret_period, then filter/label by fy_flag (8 = FY2024-25, 9 = FY2025-26). No fact carries fy_flag.
+    - Decode lookups (1:1 LEFT JOIN):
+        common.t_all_delers_api_v_t   (gstin = r.gstin)              → trdnm/lgnmbzpan, status, stjd
+        common.mst_state_jurisdiction_code (state_jur_code = d.stjd) → division / "range" / unit
+        common.mst_3bd_months_t (ret_period_fl = r.ret_period)       → month_desc, quarter, fy_flag
+        common.mst_fy_years_t   (flag_fy = m.fy_flag)                → desc_year e.g. '2024-25'
+    - Taxpayer NAME / jurisdiction / active-status come from the dealer master (t_all_delers_api_v_t),
+      NOT the 3B fact — "active" = canc_dt IS NULL, "cancelled" = canc_dt IS NOT NULL.
 
 MODULE 3 — GSTR-7 (TDS Return: tax deducted at source). Schema: public.
   This is the TDS return — a DIFFERENT form from GSTR-3B. Answer GSTR-7 / TDS /
@@ -109,16 +124,21 @@ KEY JOIN PATHS:
 - EWB event detail        → tbl_ewb_partb_ewb JOIN ...canceldet/extenddet/rejdtl/transdet ON idtbl_ewb_partb_ewb
 - GSTR-7 deductor/period   → tbl_gst_rtn_r7 r JOIN tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
 - GSTR-7 invoice detail    → ...tds JOIN ...tds_inv ON ...tds_inv.idtbl_gst_rtn_r7_tds = ...tds.idtbl_gst_rtn_r7_tds
-- GSTR-3B FY/month label    → r LEFT JOIN common.mst_fy_years_t ON flag_fy = r.fy_flag
-                                LEFT JOIN common.mst_3bd_months_t ON ret_period_fl = r.ret_period
+- GSTR-3B section total     → r JOIN _sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+                                JOIN _osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details
+- GSTR-3B FY/month label    → r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period
+                                LEFT JOIN common.mst_fy_years_t fy ON fy.flag_fy = m.fy_flag
+- GSTR-3B taxpayer name/geo → r LEFT JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+                                LEFT JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
 
 GST DOMAIN RULES:
 - Intra-state movement (frstat = tostat in EWB; intra in GSTR): tax splits into CGST + SGST (IGST = 0)
 - Inter-state movement (frstat <> tostat): only IGST is non-zero (CGST = SGST = 0)
 - EWB "total tax" = cgstval + sgstval + igstval + cessval
-- GSTR-3B "tax payable / liability" = iamt (IGST) + camt (CGST) + samt (SGST) + csamt (Cess), the
-  period rollup totals on the 3B table. The *_tx columns (igst_tx/cgst_tx/sgst_tx) and the
-  tbl_gst_rtn_r7_tax_pay table belong to GSTR-7, never to a GSTR-3B question.
+- GSTR-3B "tax payable / liability" = iamt (IGST) + camt (CGST) + samt (SGST) + csamt (Cess) summed
+  on the relevant sup_details LEAF (outward liability = osupdet iamt+camt+samt). There is NO flat
+  rollup column. "Net ITC" = itc_net; "ITC available" = SUM over itc_avl. The *_tx columns
+  (igst_tx/cgst_tx/sgst_tx) and the tbl_gst_rtn_r7_tax_pay table belong to GSTR-7, never a GSTR-3B question.
 - GSTR-7 "TDS deducted / withheld / collected" = SUM(iamt + camt + samt). amt_ded is the gross
   pre-TDS payment the TDS was computed ON (the base) — NEVER SUM(amt_ded) for a TDS-amount question.
 - EWB status: 'ACT' = active, 'CNL' = cancelled, 'EXP' = expired. "Cancelled e-way bills" =
@@ -130,7 +150,7 @@ DATABASE SCHEMA:
 COLUMN DESCRIPTIONS:
 {descriptions}
 
-SAMPLE DATA (first 3 rows per table; the 145-column GSTR-3B table is omitted for brevity):
+SAMPLE DATA (first 3 rows per table):
 {sample_rows}
 {few_shot_block}"""
 
@@ -162,20 +182,29 @@ FEW_SHOT_EXAMPLES = [
         ),
     },
     {
-        "question": "What is the total state income (net SGST) for financial year 2024-25?",
+        "question": "What is the total outward taxable turnover for financial year 2024-25?",
         "sql": (
-            "SELECT SUM(state_income) AS total_state_income "
-            "FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned "
-            "WHERE fy_flag = 8;"
+            "SELECT SUM(o.txval) AS total_turnover "
+            "FROM public.tbl_gst_rtn_r3b r "
+            "JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b "
+            "JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o "
+            "ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details "
+            "JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period "
+            "WHERE m.fy_flag = 8;"
         ),
     },
     {
         "question": "List the top 5 taxpayers by outward taxable value in FY2024-25.",
         "sql": (
-            "SELECT r.gstin, r.trdnm, SUM(r.osup_det_txval) AS total_outward "
-            "FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned r "
-            "WHERE r.fy_flag = 8 "
-            "GROUP BY r.gstin, r.trdnm "
+            "SELECT r.gstin, d.trdnm, SUM(o.txval) AS total_outward "
+            "FROM public.tbl_gst_rtn_r3b r "
+            "JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b "
+            "JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o "
+            "ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details "
+            "JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period "
+            "LEFT JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin "
+            "WHERE m.fy_flag = 8 "
+            "GROUP BY r.gstin, d.trdnm "
             "ORDER BY total_outward DESC LIMIT 5;"
         ),
     },
