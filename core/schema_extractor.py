@@ -166,9 +166,15 @@ class SchemaExtractor:
             blocks[qualified] = "\n".join(lines)
         return blocks
 
-    def get_full_context(self) -> dict[str, str]:
+    def get_full_context(self, sample_n: int = 1) -> dict[str, str]:
+        # sample_n=1 (not 3): the normalized 39-table schema pushed the static
+        # prompt past the 32K window (n=3 ~33K, n=2 32.5K — no room for output).
+        # ~4.9K tokens per sample-row-set across 39 tables. One row per table still
+        # grounds column formats (and descriptions already carry inline "Sample:"
+        # values), leaving ~2.6K headroom for the 1024-token output + self-correction
+        # turns. RAG configs use retrieved schema, not this block.
         return {
             "ddl": self.get_ddl(),
             "descriptions": self.get_column_descriptions(),
-            "sample_rows": self.get_sample_rows(),
+            "sample_rows": self.get_sample_rows(sample_n),
         }
