@@ -860,13 +860,54 @@ skipped (thinking-OFF already at 100%; nothing to add).
 **When:** After the Phase 7 model comparison. New government schemas were provided (beyond the current
 EWB / GSTR-3B / GSTR-7 + pending 4th). Done on a dedicated branch; `main` stays clean.
 
-**Scope (fills in once the DDL is pasted into the branch):**
-- Add the new schema DDL under `database/Official_Schemas/`.
+**Received schema set (2026-07-13, `database/New_schemas/` → promoted to `Official_Schemas/`):**
+- `ewb.sql`, `gstr7.sql` — comment reformatting only, zero structural change vs v1.
+- `gstr3b.sql` — **normalized 17-table GSTR-3B** (`public.tbl_gst_rtn_r3b*`): main + 4 link parents
+  (`inward_sup`, `itc_elg`, `sup_details`, `tx_pmt`) + 12 detail tables; sections stored as rows
+  (ITC by `ty`, payments per liability line `liab_ldg_id`/`trans_typ`). `gstin`/`ret_period` only on
+  the main table — details reach it via 2–3 join hops.
+- `gstreg.sql` — **NEW module** (`common`): `t_all_delers_api_v_t` dealer master (1 row/GSTIN,
+  UNIQUE(gstin)) + `mst_state_jurisdiction_code` (stjd → division/range/unit, UNIQUE(state_jur_code)).
+  Supplies the taxpayer identity/status/geo decode for all fact modules.
+- `common_masters.sql` — first standalone DDL for `mst_fy_years_t` + `mst_3bd_months_t`.
+
+**KEY DECISION (2026-07-13, guide):** keep the **latest** GSTR-3B schema = normalized `gstr3b.sql`;
+**drop the flat MV `gstr3b_new.sql`** (`live_reports.r3b_comphrehensive_..._partitioned`) entirely.
+Impact audit before removal:
+- *Data lost:* 6.1(A)/(B) RCM payment split (0 golds / 0 pool pairs ever used it), `fy_flag` on the
+  fact (FY scoping reshapes to `ret_period → mst_3bd_months_t.ret_period_fl → fy_flag →
+  mst_fy_years_t.flag_fy` — every FY question gains a join), `mnth_id` (0 uses),
+  `return_from/to_date` + tax-payable rollup (derivable), `fil_dt` native DATE (normalized is
+  VARCHAR DD-MM-YYYY → `TO_DATE`).
+- *Breakage (rebuilt from scratch anyway per Phase 8):* 38/112 golds + 54/142 pool pairs target the
+  MV; `config/prompts.py` module map + 2/5 few-shots; `seed_data_official.py` MV block;
+  `descriptions_official.json` MV key (145 cols) → 17 keys; `core/schema_indexer.py::_CORE_TABLES`
+  MV entry → `public.tbl_gst_rtn_r3b`.
+- *Watch-outs for v2:* difficulty profile shifts (every 3B question gains 1–3 joins — baseline EX not
+  comparable to v1's 90.2); the 5 supply detail tables have IDENTICAL columns
+  (`txval/iamt/camt/samt/csamt`) → adversarial seed must give each section distinct value magnitudes
+  or the distinguishability audit's table-swap mutator collides half the module; static prompt
+  shrinks (normalized DDL 17KB vs MV 33KB) easing the Qwen 32K window.
+
+**RULE: received schema DDLs are READ-ONLY** — external artifacts from the government team; never
+edit their content (not even comments/join hints). Stale references inside them are corrected in
+project-owned layers (`descriptions_official.json`, `config/prompts.py`), not in the files.
+Known stale bits carried as-received: `gstreg.sql` join hint still names the dropped MV;
+`common_masters.sql` comments still describe MV-era `<fact>.fy_flag`/`mnth_id` join keys (no
+current fact table carries either — FY path is `ret_period → mst_3bd_months_t`); `gstr7.sql` has a
+stray trailing `-`.
+
+**Scope:**
+- [DONE 2026-07-13] Swap `database/Official_Schemas/` to the new 5-file set **as received** (ewb,
+  gstr7, normalized gstr3b, gstreg, common_masters); MV `gstr3b_new.sql` removed.
 - Extend `database/descriptions_official.json` (schema-qualified keys, LLM-HIDE annotations).
-- Seed toy data (`database/seed_data_official.py`) + verify counts.
+- Rewrite seed (`database/seed_data_official.py`): 17-table FK-consistent GSTR-3B + gstreg tables,
+  **adversarial values from day one** (audit-looped, distinct magnitudes per section table).
 - `SchemaExtractor` already multi-schema — confirm the new schema/tables are picked up + qualified.
-- Grow the gold eval set + RAG pool to cover the new module (same disjoint-pool leakage discipline
-  as `RAG_plan.md` §2).
+- Update `core/schema_indexer.py::_CORE_TABLES` + `config/prompts.py` (module map, quoting rule
+  line for dropped `live_reports`, 2 MV few-shots).
+- Rebuild gold eval set + RAG pool from scratch for the new schema set (same disjoint-pool leakage
+  discipline as `RAG_plan.md` §2); held-out set (W2) authored here.
 - If the schema effort grows its own methodology/spec → split to `SCHEMA_plan.md` (the way Phase 5-B
   earned `RAG_plan.md`); until then it lives here.
 

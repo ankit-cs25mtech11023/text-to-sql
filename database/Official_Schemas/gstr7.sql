@@ -29,7 +29,8 @@
 -- 8) public.tbl_gst_rtn_r7_tax_paid_pd_by_cash   -- Tax actually paid via cash ledger
 -- ============================================================
 
-CREATE TABLE public.tbl_gst_rtn_r7 (  -- MAIN TABLE for GSTR-7 returns. JOIN THIS TABLE FOR ALL QUERIES needing the deductor's GSTIN or the return period. UNIQUE(gstin, fp).
+-- MAIN TABLE for GSTR-7 returns. JOIN THIS TABLE FOR ALL QUERIES needing the deductor's GSTIN or the return period. UNIQUE(gstin, fp).
+CREATE TABLE public.tbl_gst_rtn_r7 (
   idtbl_gst_rtn_r7 BIGINT PRIMARY KEY, -- Primary key (internal identity).
   fp VARCHAR, -- Return Period in MMYYYY format. Sample: "102018" (=Oct 2018), "042019" (=Apr 2019). YEAR=last 4 chars, MONTH=first 2. For "year 2019" use fp LIKE '%2019'. For "April" use fp LIKE '04%'. NEVER use equality for year-only filters.
   gstin VARCHAR, -- 15-char Deductor GSTIN — the filer of this R7 return. Sample: "03AABCP9999J2DM". First 2 chars = state code. This column ONLY exists in this main table. For counting deductors use COUNT(DISTINCT gstin).
@@ -37,7 +38,8 @@ CREATE TABLE public.tbl_gst_rtn_r7 (  -- MAIN TABLE for GSTR-7 returns. JOIN THI
   inserted_date TIMESTAMPTZ, -- Row ingestion timestamp. Sample: "2023-11-28 12:29:06.823828+05:30". Operational column — usually NOT what users mean by "filed on".
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tds (  -- TDS data: one row per DEDUCTEE per return. amt_ded = gross amount paid to the deductee on which TDS was deducted. The IGST/CGST/SGST split below describes the tax that was withheld. JOIN through tbl_gst_rtn_r7 (idtbl_gst_rtn_r7) to reach the deductor's gstin and the return period.
+-- TDS data: one row per DEDUCTEE per return. amt_ded = gross amount paid to the deductee on which TDS was deducted. The IGST/CGST/SGST split below describes the tax that was withheld. JOIN through tbl_gst_rtn_r7 (idtbl_gst_rtn_r7) to reach the deductor's gstin and the return period.
+CREATE TABLE public.tbl_gst_rtn_r7_tds (
   idtbl_gst_rtn_r7_tds BIGINT PRIMARY KEY, -- Primary key
   gstin_ded TEXT, -- 15-char DEDUCTEE GSTIN — the supplier whose payment was subject to TDS. Sample: "19AABCK9999C1ZI" (state 19 = West Bengal), "03AADFP9999Q1ZR". DO NOT confuse with the deductor's gstin in the main table.
   amt_ded NUMERIC, -- Amount paid to deductee on which tax was deducted (gross, pre-TDS). Sample: 7669081.00, 2191166.00, 500000.00.
@@ -53,7 +55,8 @@ CREATE TABLE public.tbl_gst_rtn_r7_tds (  -- TDS data: one row per DEDUCTEE per 
   ival TEXT -- Invoice value (often blank on older TDS rows; see tds_inv).
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tds_inv (  -- TDS invoice-level breakdown: one row per invoice line under a TDS deductee row. Amounts here detail the deduction at invoice granularity. JOIN through idtbl_gst_rtn_r7_tds to tbl_gst_rtn_r7_tds for the deductee, then to main for deductor/period.
+-- TDS invoice-level breakdown: one row per invoice line under a TDS deductee row. Amounts here detail the deduction at invoice granularity. JOIN through idtbl_gst_rtn_r7_tds to tbl_gst_rtn_r7_tds for the deductee, then to main for deductor/period.
+CREATE TABLE public.tbl_gst_rtn_r7_tds_inv (
   idtbl_gst_rtn_r7_tds_inv BIGINT PRIMARY KEY, -- Primary key
   inum TEXT, -- Invoice number (free-form). Sample: "498", "61", "ME/25-26/464", "TI/25-26/229", "AV/25-26/30". May be purely numeric or alphanumeric.
   idt TEXT, -- Invoice date in DD-MM-YYYY. Sample: "29-09-2025", "13-09-2025", "26-08-2025".
@@ -68,7 +71,8 @@ CREATE TABLE public.tbl_gst_rtn_r7_tds_inv (  -- TDS invoice-level breakdown: on
   inserted_date TIMESTAMPTZ -- Row ingestion timestamp. Sample: "2025-10-14 12:12:23.991941+05:30".
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tdsa (  -- TDS Amendment data: revisions to TDS rows reported in PRIOR return periods. Each row carries BOTH the original (`o*`) values and the revised values. The original period is in `omonth` (MMYYYY). The amendment itself belongs to the return period of the parent tbl_gst_rtn_r7.fp. Use this table for "TDS corrections / amendments" questions.
+-- TDS Amendment data: revisions to TDS rows reported in PRIOR return periods. Each row carries BOTH the original (`o*`) values and the revised values. The original period is in `omonth` (MMYYYY). The amendment itself belongs to the return period of the parent tbl_gst_rtn_r7.fp. Use this table for "TDS corrections / amendments" questions.
+CREATE TABLE public.tbl_gst_rtn_r7_tdsa (
   idtbl_gst_rtn_r7_tdsa BIGINT PRIMARY KEY, -- Primary key
   ogstin_ded TEXT, -- ORIGINAL deductee GSTIN as previously reported. Sample: "27AAACC9999G1ZD", "03AABFV9999G1ZG". May be empty when only amount was amended.
   omonth TEXT, -- ORIGINAL return period being amended, in MMYYYY. Sample: "102019" (=Oct 2019), "042019", "052019".
@@ -93,7 +97,8 @@ CREATE TABLE public.tbl_gst_rtn_r7_tdsa (  -- TDS Amendment data: revisions to T
   oival TEXT -- ORIGINAL invoice value (often blank).
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tdsa_inv (  -- TDSA invoice-level breakdown. Mirrors tds_inv but carries ORIGINAL (`o*`) and REVISED columns side by side. JOIN through idtbl_gst_rtn_r7_tdsa to tbl_gst_rtn_r7_tdsa.
+-- TDSA invoice-level breakdown. Mirrors tds_inv but carries ORIGINAL (`o*`) and REVISED columns side by side. JOIN through idtbl_gst_rtn_r7_tdsa to tbl_gst_rtn_r7_tdsa.
+CREATE TABLE public.tbl_gst_rtn_r7_tdsa_inv (
   idtbl_gst_rtn_r7_tdsa_inv BIGINT PRIMARY KEY, -- Primary key
   ogstin_ded TEXT, -- ORIGINAL deductee GSTIN (often blank in samples).
   omonth TEXT, -- ORIGINAL period MMYYYY (often blank in samples — already carried on the parent tdsa row).
@@ -116,7 +121,8 @@ CREATE TABLE public.tbl_gst_rtn_r7_tdsa_inv (  -- TDSA invoice-level breakdown. 
   inserted_date TIMESTAMPTZ -- Row ingestion timestamp.
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tax_pay (  -- Tax PAYABLE — declared liability for the return. Multiple rows per return (one per liab_id). The igst_*/cgst_*/sgst_*/cess_* columns break the liability into tax / interest / penalty / fee / others, with `*_tot` as the row's total. JOIN through tbl_gst_rtn_r7 (idtbl_gst_rtn_r7) for deductor/period.
+-- Tax PAYABLE — declared liability for the return. Multiple rows per return (one per liab_id). The igst_*/cgst_*/sgst_*/cess_* columns break the liability into tax / interest / penalty / fee / others, with `*_tot` as the row's total. JOIN through tbl_gst_rtn_r7 (idtbl_gst_rtn_r7) for deductor/period.
+CREATE TABLE public.tbl_gst_rtn_r7_tax_pay (  
   idtbl_gst_rtn_r7_tax_pay BIGINT PRIMARY KEY, -- Primary key
   liab_id TEXT, -- Liability ID (numeric string). Sample: "227462490", "111076359", "233749684". Sequential identifier per liability obligation.
   trancd TEXT, -- Transaction code. Sample: "30002" (consistent with R3B's "regular tax payment" code).
@@ -149,13 +155,15 @@ CREATE TABLE public.tbl_gst_rtn_r7_tax_pay (  -- Tax PAYABLE — declared liabil
   inserted_date TIMESTAMPTZ -- Row ingestion timestamp.
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tax_paid (  -- Parent JOIN TABLE for tax-paid settlements. Holds no payment data itself; bridges tbl_gst_rtn_r7 to the per-mode payment detail tables (currently only pd_by_cash). One row per return per payment block.
+-- Parent JOIN TABLE for tax-paid settlements. Holds no payment data itself; bridges tbl_gst_rtn_r7 to the per-mode payment detail tables (currently only pd_by_cash). One row per return per payment block.
+CREATE TABLE public.tbl_gst_rtn_r7_tax_paid (
   idtbl_gst_rtn_r7_tax_paid BIGINT PRIMARY KEY, -- Primary key
   tbl_gst_rtn_r7 BIGINT REFERENCES tbl_gst_rtn_r7(idtbl_gst_rtn_r7), -- FK to main table (`tbl_gst_rtn_r7` column name — FK-naming quirk).
   inserted_date TIMESTAMPTZ -- Row ingestion timestamp.
 );
 
-CREATE TABLE public.tbl_gst_rtn_r7_tax_paid_pd_by_cash (  -- Tax actually PAID via cash ledger — settlement records against the liabilities declared in tbl_gst_rtn_r7_tax_pay. Multiple rows per return (one per debit_id). Same igst/cgst/sgst/cess breakdown as tax_pay. JOIN through idtbl_gst_rtn_r7_tax_paid -> tbl_gst_rtn_r7_tax_paid -> tbl_gst_rtn_r7 to reach the deductor and period.
+-- Tax actually PAID via cash ledger — settlement records against the liabilities declared in tbl_gst_rtn_r7_tax_pay. Multiple rows per return (one per debit_id). Same igst/cgst/sgst/cess breakdown as tax_pay. JOIN through idtbl_gst_rtn_r7_tax_paid -> tbl_gst_rtn_r7_tax_paid -> tbl_gst_rtn_r7 to reach the deductor and period.
+CREATE TABLE public.tbl_gst_rtn_r7_tax_paid_pd_by_cash (
   idtbl_gst_rtn_r7_tax_paid_pd_by_cash BIGINT PRIMARY KEY, -- Primary key
   liab_id TEXT, -- Liability ID being settled. Sample: "243857545", "243859223". Match to tbl_gst_rtn_r7_tax_pay.liab_id when reconciling payable vs paid.
   debit_id TEXT, -- Debit reference ID from the cash ledger. Sample: "DC0302200138755", "DC0307190117451". Format: "DC" + DDMMYY of debit + sequence.
@@ -189,26 +197,4 @@ CREATE TABLE public.tbl_gst_rtn_r7_tax_paid_pd_by_cash (  -- Tax actually PAID v
   inserted_date TIMESTAMPTZ -- Row ingestion timestamp.
 );
 
--- ============================================================
--- JOIN HINTS FOR SQL GENERATION
--- These show the join paths from detail tables to main table.
--- IMPORTANT: most child-of-main FK columns are named `tbl_gst_rtn_r7`
--- (no `id` prefix) — the source-DB quirk noted in the header.
--- ============================================================
-
--- Join hints:
-
--- TDS chain (deductee-wise, then invoice-wise):
--- tbl_gst_rtn_r7_tds.tbl_gst_rtn_r7 can be joined with tbl_gst_rtn_r7.idtbl_gst_rtn_r7
--- tbl_gst_rtn_r7_tds_inv.idtbl_gst_rtn_r7_tds can be joined with tbl_gst_rtn_r7_tds.idtbl_gst_rtn_r7_tds
-
--- TDSA chain (amendments to prior periods, then invoice-wise):
--- tbl_gst_rtn_r7_tdsa.tbl_gst_rtn_r7 can be joined with tbl_gst_rtn_r7.idtbl_gst_rtn_r7
--- tbl_gst_rtn_r7_tdsa_inv.idtbl_gst_rtn_r7_tdsa can be joined with tbl_gst_rtn_r7_tdsa.idtbl_gst_rtn_r7_tdsa
-
--- Tax payable (declared liability):
--- tbl_gst_rtn_r7_tax_pay.tbl_gst_rtn_r7 can be joined with tbl_gst_rtn_r7.idtbl_gst_rtn_r7
-
--- Tax paid (settlement) chain — via the join table:
--- tbl_gst_rtn_r7_tax_paid.tbl_gst_rtn_r7 can be joined with tbl_gst_rtn_r7.idtbl_gst_rtn_r7
--- tbl_gst_rtn_r7_tax_paid_pd_by_cash.idtbl_gst_rtn_r7_tax_paid can be joined with tbl_gst_rtn_r7_tax_paid.idtbl_gst_rtn_r7_tax_paid
+-

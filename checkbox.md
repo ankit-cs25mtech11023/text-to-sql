@@ -157,11 +157,14 @@
 > New govt schemas to be pasted into the branch. Pipeline is schema-agnostic — only `database/` +
 > descriptions + gold/pool data change. `main` stays clean. Details: `plan.md` Phase 8.
 
-- [ ] `git checkout -b new-schema`; paste new schema DDL → `database/Official_Schemas/`
-- [ ] Extend `database/descriptions_official.json` (schema-qualified keys, LLM-HIDE)
-- [ ] Seed toy data + verify counts
+- [x] `git checkout -b new-schema`; new schemas received into `database/New_schemas/` (2026-07-13)
+- [x] **Decision (guide): keep latest GSTR-3B = normalized 17-table `gstr3b.sql`; DROP flat MV `gstr3b_new.sql`.** Impact audited pre-removal: RCM-split/fy_flag/mnth_id losses have 0 hard references; 38/112 golds + 54/142 pool + prompts/seed/descriptions/`_CORE_TABLES` all rebuilt in this phase anyway (details plan.md Phase 8)
+- [x] Swap `database/Official_Schemas/` → new 5-file set **as received, byte-identical** (ewb, gstr7, normalized gstr3b, NEW gstreg, NEW common_masters); MV removed. **DDLs are READ-ONLY** — stale refs inside them (gstreg MV join hint, masters `<fact>.fy_flag`/`mnth_id` comments, gstr7 stray dash) stay; corrected in descriptions/prompts layer instead
+- [ ] Extend `database/descriptions_official.json` (schema-qualified keys, LLM-HIDE) — 17 GSTR-3B keys + 2 gstreg keys; drop MV key; carry the corrected join paths (gstin → gstreg, ret_period → months master) that the DDL comments get wrong
+- [ ] Update `core/schema_indexer.py::_CORE_TABLES` (MV → `public.tbl_gst_rtn_r3b`) + `config/prompts.py` (module map, `live_reports` quoting-rule line, 2 MV few-shots)
+- [ ] Rewrite seed (`seed_data_official.py`): 17-table FK-consistent GSTR-3B + gstreg; adversarial values (distinct magnitudes per identical-shape section table), audit-looped
 - [ ] Confirm `SchemaExtractor` picks up + qualifies the new schema/tables
-- [ ] Grow gold eval set + RAG pool for the new module (disjoint-pool leakage discipline)
+- [ ] Rebuild gold eval set + RAG pool from scratch (disjoint-pool leakage discipline); author held-out set (W2)
 - [ ] *(if it grows)* split methodology to `SCHEMA_plan.md`
 
 ## Phase 9: Validity Hardening (review-driven, `thesis_review.md` 2026-07-02)

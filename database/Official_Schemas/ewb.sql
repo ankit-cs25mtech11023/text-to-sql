@@ -9,7 +9,7 @@
 --                         extend events on the e-way bill
 --
 -- Tables (brief):
--- 1) public.tbl_ewb_parta                    -- Part-A parent (one row per processed batch: state, period, category)
+-- 1) public.tbl_ewb_parta                    -- Part-A parent (one row per processed batch: state, period, category.)
 -- 2) public.tbl_ewb_parta_ewb                -- MAIN PART-A TABLE — one row per e-way bill (frgstin, togstin, ewbno, ewbdt, values)
 -- 3) public.tbl_ewb_parta_ewb_itemlist       -- Item-level lines within each Part-A EWB (HSN, qty, rates, amounts)
 -- 4) public.tbl_ewb_partb                    -- Part-B parent (one row per processed batch: state, period, category)
@@ -21,7 +21,8 @@
 -- 10) public.tbl_ewb_partb_ewb_transdet      -- Transporter assignment / change events
 -- ============================================================
 
-CREATE TABLE public.tbl_ewb_parta (  -- PART-A PARENT TABLE — represents one processed batch of Part-A e-way bills (per state, period, category). Detail rows in tbl_ewb_parta_ewb roll up here via idtbl_ewb_parta.
+-- PART-A PARENT TABLE — represents one processed batch of Part-A e-way bills (per state, period, category). Detail rows in tbl_ewb_parta_ewb roll up here via idtbl_ewb_parta.
+CREATE TABLE public.tbl_ewb_parta (
   idtbl_ewb_parta BIGINT PRIMARY KEY, -- Primary key
   statecode VARCHAR, -- Numeric state code as string. Sample: "3" (=Punjab), "6" (=Haryana), "8" (=Rajasthan), "24" (=Gujarat).
   statename VARCHAR, -- Uppercase state name. Sample: "PUNJAB", "HARYANA", "RAJASTHAN".
@@ -29,10 +30,11 @@ CREATE TABLE public.tbl_ewb_parta (  -- PART-A PARENT TABLE — represents one p
   period TEXT, -- Return period in MMYYYY format when populated; OFTEN EMPTY in data. Prefer procdate for filtering.
 );
 
-CREATE TABLE public.tbl_ewb_parta_ewb (  -- MAIN PART-A TABLE for e-way bills. JOIN THIS TABLE FOR ALL QUERIES needing taxpayer (consignor/consignee), invoice value, distance, or EWB identifier. This is the ONLY table with frgstin, togstin, ewbno.
+-- MAIN PART-A TABLE for e-way bills. JOIN THIS TABLE FOR ALL QUERIES needing taxpayer (consignor/consignee), invoice value, distance, or EWB identifier. This is the ONLY table with frgstin, togstin, ewbno.
+CREATE TABLE public.tbl_ewb_parta_ewb (
   idtbl_ewb_parta_ewb BIGINT PRIMARY KEY, -- Primary key
   ewbno VARCHAR UNIQUE, -- 12-digit E-Way Bill number assigned by NIC portal. Unique per Part-A row (one row per e-way bill). Sample: "392234145276", "392234143845".
-  ewbdt VARCHAR, -- E-Way Bill generation timestamp in DD/MM/YYYY HH:MM:SS AM/PM. Sample: "20/04/2026 11:52:00 PM".
+  ewbdt VARCHAR, -- E-Way Bill generation timestamp in DD/MM/YYYY HH:MM:SS AM/PM. Sample: "20/04/2026 11:52:00 PM"..
   usertyp VARCHAR, -- LLM-HIDE User type that generated the EWB.
   usergstin VARCHAR, -- 15-char GSTIN of the user that generated the EWB. Sample: "06AAECM0000F1ZK".
   transtyp VARCHAR, -- Transaction type code (numeric string). Sample: "1" (=Regular), "2" (=Bill To-Ship To), "3" (=Bill From-Dispatch From), "4" (=Combination of 2 and 3).
@@ -72,7 +74,8 @@ CREATE TABLE public.tbl_ewb_parta_ewb (  -- MAIN PART-A TABLE for e-way bills. J
   toaddr TEXT -- Consignee full address (free-text). Sample: "PO Box No. 28, Near Village Nalash, ...".
 );
 
-CREATE TABLE public.tbl_ewb_parta_ewb_itemlist (  -- Item-level lines within each Part-A e-way bill. One row per HSN/item line in the consignment. JOIN through idtbl_ewb_parta_ewb to tbl_ewb_parta_ewb to reach taxpayer info.
+-- Item-level lines within each Part-A e-way bill. One row per HSN/item line in the consignment. JOIN through idtbl_ewb_parta_ewb to tbl_ewb_parta_ewb to reach taxpayer info.
+CREATE TABLE public.tbl_ewb_parta_ewb_itemlist (
   idtbl_ewb_parta_ewb_itemlist BIGINT PRIMARY KEY, -- Primary key
   itemno VARCHAR, -- Line number within the EWB (string). Sample: "1", "13", "14".
   prodnam VARCHAR, -- Product / item name (free-text, OFTEN BLANK in data). Sample: "Bio Fuel Pellets 8MM - 3400 GCV".
@@ -89,7 +92,8 @@ CREATE TABLE public.tbl_ewb_parta_ewb_itemlist (  -- Item-level lines within eac
   idtbl_ewb_parta_ewb BIGINT REFERENCES tbl_ewb_parta_ewb(idtbl_ewb_parta_ewb), -- FK to Part-A main table. MUST JOIN through this for taxpayer/period info.
 );
 
-CREATE TABLE public.tbl_ewb_partb (  -- PART-B PARENT TABLE — represents one processed batch of Part-B events (per state, period, category). Detail rows in tbl_ewb_partb_ewb roll up here via idtbl_ewb_partb.
+-- PART-B PARENT TABLE — represents one processed batch of Part-B events (per state, period, category). Detail rows in tbl_ewb_partb_ewb roll up here via idtbl_ewb_partb.
+CREATE TABLE public.tbl_ewb_partb (
   ididtbl_ewb_partb BIGINT PRIMARY KEY, -- Primary key (note the doubled "id" prefix — this is the actual column name in source DB).
   statecode VARCHAR, -- Numeric state code as string. Sample: "3" (=Punjab).
   statename VARCHAR, -- Uppercase state name. Sample: "PUNJAB".
@@ -97,14 +101,16 @@ CREATE TABLE public.tbl_ewb_partb (  -- PART-B PARENT TABLE — represents one p
   period TEXT, -- Return period (MMYYYY) when populated; OFTEN EMPTY. Prefer procdate.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb (  -- MAIN PART-B TABLE for e-way bills. One row per Part-B event packet (validity / vehicle / cancel / etc.). Linked LOGICALLY to Part-A via ewb_no = tbl_ewb_parta_ewb.ewbno (no enforced FK between parts).
+-- MAIN PART-B TABLE for e-way bills. One row per Part-B event packet (validity / vehicle / cancel / etc.). Linked LOGICALLY to Part-A via ewb_no = tbl_ewb_parta_ewb.ewbno (no enforced FK between parts).
+CREATE TABLE public.tbl_ewb_partb_ewb (
   idtbl_ewb_partb_ewb BIGINT PRIMARY KEY, -- Primary key
   ewb_no VARCHAR, -- 12-digit E-Way Bill number. Sample: "771625663090". Use ewb_no = tbl_ewb_parta_ewb.ewbno to bridge Part-A and Part-B.
   fin_valid_dt VARCHAR, -- Final validity date for the EWB in DD/MM/YYYY HH:MM:SS AM/PM. Sample: "20/04/2026 11:59:59 PM".
   idtbl_ewb_partb BIGINT REFERENCES tbl_ewb_partb(ididtbl_ewb_partb), -- FK to Part-B parent batch.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb_partbdet (  -- Vehicle and transport detail per Part-B EWB. Multiple rows per EWB are possible when the vehicle/transporter changes mid-route.
+-- Vehicle and transport detail per Part-B EWB. Multiple rows per EWB are possible when the vehicle/transporter changes mid-route.
+CREATE TABLE public.tbl_ewb_partb_ewb_partbdet (
   idtbl_ewb_partb_ewb_partbdet BIGINT PRIMARY KEY, -- Primary key
   vehno VARCHAR, -- Vehicle registration number (Indian RTO format). Sample: "PB10KB0326", "RJ23GC4575", "GJ27TG8978".
   frplace VARCHAR, -- From place for this leg (mixed granularity in data: state, district, city, or free-text). Sample: "PUNJAB", "NAGAUR", "DIST BEAWAR  RAJASTHAN", "punjabi bagh bkg dly".
@@ -119,7 +125,8 @@ CREATE TABLE public.tbl_ewb_partb_ewb_partbdet (  -- Vehicle and transport detai
   valid_till_dt TEXT, -- Validity-till date for this leg DD/MM/YYYY HH:MM:SS AM/PM. Often blank.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb_canceldet (  -- Cancellation events on an EWB. Holds when, why and by whom an EWB was cancelled.
+-- Cancellation events on an EWB. Holds when, why and by whom an EWB was cancelled.
+CREATE TABLE public.tbl_ewb_partb_ewb_canceldet (
   idtbl_ewb_partb_ewb_canceldet BIGINT PRIMARY KEY, -- Primary key
   ewb_no TEXT, -- Cancelled EWB number (denormalized). FREQUENTLY BLANK in data — JOIN through idtbl_ewb_partb_ewb to get it from tbl_ewb_partb_ewb.ewb_no.
   canceldt TEXT, -- Cancellation timestamp DD/MM/YYYY HH:MM:SS AM/PM. Sample: "18/04/2026 10:38:00 PM".
@@ -129,7 +136,8 @@ CREATE TABLE public.tbl_ewb_partb_ewb_canceldet (  -- Cancellation events on an 
   idtbl_ewb_partb_ewb BIGINT REFERENCES tbl_ewb_partb_ewb(idtbl_ewb_partb_ewb), -- FK to Part-B main table.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb_extenddet (  -- Validity-extension events on an EWB. Captures legitimate delays where the transporter/taxpayer extended the valid-till date.
+-- Validity-extension events on an EWB. Captures legitimate delays where the transporter/taxpayer extended the valid-till date.
+CREATE TABLE public.tbl_ewb_partb_ewb_extenddet (
   idtbl_ewb_partb_ewb_extenddet BIGINT PRIMARY KEY, -- Primary key
   extdt VARCHAR, -- Extension request timestamp DD/MM/YYYY HH:MM:SS AM/PM. Sample: "19/04/2026 09:23:00 PM".
   extreascd VARCHAR, -- Extension reason code (numeric string). Sample: "4" (=Delay), "99" (=Others).
@@ -143,7 +151,8 @@ CREATE TABLE public.tbl_ewb_partb_ewb_extenddet (  -- Validity-extension events 
   ewb_no TEXT, -- Denormalized EWB number — FREQUENTLY BLANK. JOIN through tbl_ewb_partb_ewb for the actual EWB number.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb_rejdtl (  -- Rejection events: when the counterparty GSTIN rejects an EWB. Used to detect disputed / refused consignments.
+-- Rejection events: when the counterparty GSTIN rejects an EWB. Used to detect disputed / refused consignments.
+CREATE TABLE public.tbl_ewb_partb_ewb_rejdtl (
   idtbl_ewb_partb_ewb_rejdtl BIGINT PRIMARY KEY, -- Primary key
   ewb_no TEXT, -- Rejected EWB number (denormalized) — FREQUENTLY BLANK. JOIN through tbl_ewb_partb_ewb.
   rejgstin TEXT, -- 15-char GSTIN that rejected the EWB (counterparty). Sample: "05AYXPR0000P1ZC", "06AAACK0000K1ZF".
@@ -151,7 +160,8 @@ CREATE TABLE public.tbl_ewb_partb_ewb_rejdtl (  -- Rejection events: when the co
   idtbl_ewb_partb_ewb BIGINT REFERENCES tbl_ewb_partb_ewb(idtbl_ewb_partb_ewb), -- FK to Part-B main table.
 );
 
-CREATE TABLE public.tbl_ewb_partb_ewb_transdet (  -- Transporter assignment / change events on an EWB. Captures when a new transporter is assigned (transid) or an upload is recorded.
+-- Transporter assignment / change events on an EWB. Captures when a new transporter is assigned (transid) or an upload is recorded.
+CREATE TABLE public.tbl_ewb_partb_ewb_transdet (
   idtbl_ewb_partb_ewb_transdet BIGINT PRIMARY KEY, -- Primary key
   transid VARCHAR, -- 15-char GSTIN of the newly assigned transporter. Sample: "88AAECS0000H1ZA", "08AAICK0000B1ZE".
   updid VARCHAR, -- Uploader identifier — usually an API/system handle PADDED WITH TRAILING SPACES, sometimes a GSTIN. Sample: "API_NBC_RJ  ", "API_AMBUJACEMENTLTD ", "ULTRATECH   ", "07AHGPK0000D1ZT     ". Trim before comparing.
@@ -160,23 +170,4 @@ CREATE TABLE public.tbl_ewb_partb_ewb_transdet (  -- Transporter assignment / ch
   ewb_no TEXT, -- LLM-HIDE Denormalized EWB number — FREQUENTLY BLANK. JOIN through tbl_ewb_partb_ewb.
 );
 
--- ============================================================
--- JOIN HINTS FOR SQL GENERATION
--- Intra-module FK paths. Two trees:
---   Part-A:  tbl_ewb_parta -> tbl_ewb_parta_ewb -> tbl_ewb_parta_ewb_itemlist
---   Part-B:  tbl_ewb_partb -> tbl_ewb_partb_ewb -> {partbdet, canceldet,
---                                                   extenddet, rejdtl, transdet}
--- The two trees are connected LOGICALLY by ewb_no (text):
---   tbl_ewb_parta_ewb.ewbno = tbl_ewb_partb_ewb.ewb_no
--- ============================================================
 
--- Join hints:
--- tbl_ewb_parta_ewb.idtbl_ewb_parta can be joined with tbl_ewb_parta.idtbl_ewb_parta
--- tbl_ewb_parta_ewb_itemlist.idtbl_ewb_parta_ewb can be joined with tbl_ewb_parta_ewb.idtbl_ewb_parta_ewb
--- tbl_ewb_partb_ewb.idtbl_ewb_partb can be joined with tbl_ewb_partb.ididtbl_ewb_partb
--- tbl_ewb_partb_ewb_partbdet.idtbl_ewb_partb_ewb can be joined with tbl_ewb_partb_ewb.idtbl_ewb_partb_ewb
--- tbl_ewb_partb_ewb_canceldet.idtbl_ewb_partb_ewb can be joined with tbl_ewb_partb_ewb.idtbl_ewb_partb_ewb
--- tbl_ewb_partb_ewb_extenddet.idtbl_ewb_partb_ewb can be joined with tbl_ewb_partb_ewb.idtbl_ewb_partb_ewb
--- tbl_ewb_partb_ewb_rejdtl.idtbl_ewb_partb_ewb can be joined with tbl_ewb_partb_ewb.idtbl_ewb_partb_ewb
--- tbl_ewb_partb_ewb_transdet.idtbl_ewb_partb_ewb can be joined with tbl_ewb_partb_ewb.idtbl_ewb_partb_ewb
--- tbl_ewb_parta_ewb.ewbno can be joined with tbl_ewb_partb_ewb.ewb_no
