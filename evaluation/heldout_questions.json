@@ -1,0 +1,261 @@
+[
+  {
+    "id": 2001,
+    "module": "GSTR-3B",
+    "difficulty": "simple",
+    "category": "domain_specific",
+    "question": "What is the total zero-rated (export) outward supply value across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(oz.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupzero oz ON oz.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;"
+  },
+  {
+    "id": 2002,
+    "module": "GSTR-3B",
+    "difficulty": "simple",
+    "category": "domain_specific",
+    "question": "What is the total nil-rated and exempt outward supply value across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(onx.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupnilexmp onx ON onx.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;"
+  },
+  {
+    "id": 2003,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the total non-GST outward supply value in financial year 2024-25?",
+    "gold_sql": "SELECT SUM(ong.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupnongst ong ON ong.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8;"
+  },
+  {
+    "id": 2004,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the total ITC available on all inward supplies (SGST + CGST + IGST) across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(av.samt + av.camt + av.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_avl av ON av.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg;"
+  },
+  {
+    "id": 2005,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "grouping",
+    "question": "What is the total IGST paid through ITC for each division?",
+    "gold_sql": "SELECT j.division, SUM(pi.i_pdi + pi.i_pdc + pi.i_pds) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_itc pi ON pi.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt GROUP BY j.division;"
+  },
+  {
+    "id": 2006,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "ranking",
+    "question": "List the top 3 taxpayers by total tax paid in cash across all years.",
+    "gold_sql": "SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt GROUP BY r.gstin ORDER BY SUM(pc.ipd + pc.cpd + pc.spd + pc.cspd) DESC LIMIT 3;",
+    "order_matters": true
+  },
+  {
+    "id": 2007,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "decode",
+    "question": "What is the total zero-rated supply value per financial year, labelled by year?",
+    "gold_sql": "SELECT y.desc_year, SUM(oz.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupzero oz ON oz.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag GROUP BY y.desc_year;"
+  },
+  {
+    "id": 2008,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "How many GSTR-3B returns had net SGST ITC available above 50000?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg WHERE n.samt > 50000;"
+  },
+  {
+    "id": 2009,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the average net IGST ITC available per return in financial year 2025-26?",
+    "gold_sql": "SELECT AVG(n.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 9;"
+  },
+  {
+    "id": 2010,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "How many taxpayers had a total outward taxable value above 5000000 across all years?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM (SELECT r.gstin, SUM(o.txval) AS tot FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY r.gstin) q WHERE q.tot > 5000000;"
+  },
+  {
+    "id": 2011,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "grouping",
+    "question": "What is the total cess payable on outward supplies for each division?",
+    "gold_sql": "SELECT j.division, SUM(o.csamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division;"
+  },
+  {
+    "id": 2012,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "decode",
+    "question": "What is the total SGST paid in cash per quarter in financial year 2025-26?",
+    "gold_sql": "SELECT MAX(m.quarter) AS quarter, SUM(pc.spd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 9 GROUP BY m.quarter_all_mnths;"
+  },
+  {
+    "id": 2013,
+    "module": "GSTREG",
+    "difficulty": "simple",
+    "category": "aggregation",
+    "question": "How many distinct constitutions of business appear among registered taxpayers?",
+    "gold_sql": "SELECT COUNT(DISTINCT d.cobz) AS n FROM common.t_all_delers_api_v_t d;"
+  },
+  {
+    "id": 2014,
+    "module": "GSTREG",
+    "difficulty": "simple",
+    "category": "filtering",
+    "question": "How many taxpayers have an unknown (NA) risk profile?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.risk_profile = 'NA';"
+  },
+  {
+    "id": 2015,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "decode",
+    "question": "What is the division and range for the taxpayer Sangh Textiles Ltd?",
+    "gold_sql": "SELECT j.division, j.\"range\" FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Sangh Textiles%';"
+  },
+  {
+    "id": 2016,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the PAN number of the taxpayer Gujarat Cement Ltd?",
+    "gold_sql": "SELECT d.pan_num FROM common.t_all_delers_api_v_t d WHERE d.trdnm ILIKE '%Gujarat Cement%';"
+  },
+  {
+    "id": 2017,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "List the trade names of taxpayers registered under CENTER approving authority.",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.appr_auth = 'CENTER' ORDER BY d.trdnm;"
+  },
+  {
+    "id": 2018,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "grouping",
+    "question": "How many active taxpayers are there in each jurisdiction division?",
+    "gold_sql": "SELECT j.division, COUNT(*) AS n FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.canc_dt IS NULL GROUP BY j.division;"
+  },
+  {
+    "id": 2019,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "What is the total net SGST ITC available claimed by taxpayers under CENTER approving authority?",
+    "gold_sql": "SELECT SUM(n.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg WHERE d.appr_auth = 'CENTER';"
+  },
+  {
+    "id": 2020,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "decode",
+    "question": "Which jurisdiction range is the taxpayer Baroda Foods Ltd in?",
+    "gold_sql": "SELECT j.\"range\" FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Baroda Foods%';"
+  },
+  {
+    "id": 2021,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "How many GSTR-3B returns were filed by taxpayers with a medium risk profile?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin WHERE d.risk_profile ILIKE 'MEDIUM%';"
+  },
+  {
+    "id": 2022,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What are the trade names of taxpayers in Division 1 (ABD)?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE j.division = 'Division 1 (ABD)' ORDER BY d.trdnm;"
+  },
+  {
+    "id": 2023,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "What is the total assessable value of currently active e-way bills?",
+    "gold_sql": "SELECT SUM(assval) AS v FROM public.tbl_ewb_parta_ewb WHERE status = 'ACT';"
+  },
+  {
+    "id": 2024,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "quirk",
+    "question": "How many e-way bills have a declared travel distance above 100 km?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE CAST(travdist AS INTEGER) > 100;"
+  },
+  {
+    "id": 2025,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the average IGST value on inter-state e-way bills?",
+    "gold_sql": "SELECT AVG(igstval) AS v FROM public.tbl_ewb_parta_ewb WHERE frstat <> tostat;"
+  },
+  {
+    "id": 2026,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "ranking",
+    "question": "Which 3 consignee states received the highest total assessable value of goods?",
+    "gold_sql": "SELECT tostat FROM public.tbl_ewb_parta_ewb GROUP BY tostat ORDER BY SUM(assval) DESC LIMIT 3;",
+    "order_matters": true
+  },
+  {
+    "id": 2027,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "How many e-way bill item lines have an IGST rate above 12 percent?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb_itemlist WHERE igstrt > 12;"
+  },
+  {
+    "id": 2028,
+    "module": "GSTR-7",
+    "difficulty": "simple",
+    "category": "aggregation",
+    "question": "How many distinct deductees appear across GSTR-7 TDS records?",
+    "gold_sql": "SELECT COUNT(DISTINCT t.gstin_ded) AS n FROM public.tbl_gst_rtn_r7_tds t;"
+  },
+  {
+    "id": 2029,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the total CGST TDS withheld across all GSTR-7 returns?",
+    "gold_sql": "SELECT SUM(t.camt) AS v FROM public.tbl_gst_rtn_r7_tds t;"
+  },
+  {
+    "id": 2030,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "grouping",
+    "question": "What is the total TDS (IGST + CGST + SGST) withheld by each deductor?",
+    "gold_sql": "SELECT g.gstin, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7 g JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = g.idtbl_gst_rtn_r7 GROUP BY g.gstin;"
+  },
+  {
+    "id": 2031,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "ranking",
+    "question": "Which deductor withheld the most total TDS?",
+    "gold_sql": "SELECT g.gstin FROM public.tbl_gst_rtn_r7 g JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = g.idtbl_gst_rtn_r7 GROUP BY g.gstin ORDER BY SUM(t.iamt + t.camt + t.samt) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 2032,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "How many distinct liability IDs appear across GSTR-7 tax-payable records?",
+    "gold_sql": "SELECT COUNT(DISTINCT liab_id) AS n FROM public.tbl_gst_rtn_r7_tax_pay;"
+  }
+]
