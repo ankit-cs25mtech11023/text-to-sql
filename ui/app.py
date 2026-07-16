@@ -1,14 +1,20 @@
+import os
 import sys
 import threading
 import time
 from pathlib import Path
+
+# Shared 128-CPU box: cap torch threads BEFORE any transitive torch import, else
+# bge-large query embedding runs ~150x slow (30s vs 0.2s per encode). The pipeline
+# (and its torch) loads lazily on the first query, so setting it here is in time.
+os.environ.setdefault("OMP_NUM_THREADS", "8")
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import streamlit as st
 
 from config.settings import Settings
-from core.pipeline import TextToSQLPipeline
+from core.rag_pipeline import RAGTextToSQLPipeline
 
 # Grounded in the official schemas (EWB / GSTR-3B / GSTR-7); all verified to
 # produce correct SQL on gst_official.
@@ -24,9 +30,12 @@ EXAMPLE_QUESTIONS = [
 ]
 
 @st.cache_resource
-def load_pipeline(provider: str, model: str) -> TextToSQLPipeline:
-    settings = Settings(default_provider=provider, default_model=model)
-    return TextToSQLPipeline(settings)
+def load_pipeline(provider: str, rag_mode: str) -> RAGTextToSQLPipeline:
+    # Full RAG (rag_mode="both": retrieved schema + few-shots) over the Qwen-27B
+    # hosted endpoint — the headline config (100% EX). Cached once per session:
+    # loads bge-large + builds/loads the FAISS index on the first call.
+    settings = Settings(default_provider=provider)
+    return RAGTextToSQLPipeline(settings, rag_mode=rag_mode)
 
 
 def _render_response(payload: dict, show_sql_first: bool) -> None:
@@ -79,8 +88,8 @@ def main() -> None:
 
     with st.sidebar:
         st.header("Settings")
-        provider, model = "vllm", "xiyansql"
-        st.caption(f"Model: `{model}` — local vLLM (XiYanSQL-QwenCoder-7B)")
+        provider = "qwen"
+        st.caption("Model: `Qwen3.6-27B` (hosted) • Full RAG — retrieved schema + few-shots")
         show_sql_first = st.toggle("Show SQL first", value=True)
 
         st.divider()
@@ -149,7 +158,7 @@ def main() -> None:
     if question:
         st.session_state.messages.append({"role": "user", "content": question})
 
-        pipeline = load_pipeline(provider, model)
+        pipeline = load_pipeline(provider, "both")
 
         result_box: list = [None]
 
