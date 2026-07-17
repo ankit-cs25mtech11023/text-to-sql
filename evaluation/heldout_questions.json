@@ -257,5 +257,85 @@
     "category": "aggregation",
     "question": "How many distinct liability IDs appear across GSTR-7 tax-payable records?",
     "gold_sql": "SELECT COUNT(DISTINCT liab_id) AS n FROM public.tbl_gst_rtn_r7_tax_pay;"
+  },
+  {
+    "id": 2033,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "How many taxpayers filed a GSTR-3B return in May 2025 but not in June 2025?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM (SELECT r.gstin FROM public.tbl_gst_rtn_r3b r WHERE r.ret_period = '052025' EXCEPT SELECT r2.gstin FROM public.tbl_gst_rtn_r3b r2 WHERE r2.ret_period = '062025') q;"
+  },
+  {
+    "id": 2034,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "decode",
+    "question": "What is the total outward taxable value reported in the month named August of financial year 2024-25?",
+    "gold_sql": "SELECT SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE m.month_desc = 'August' AND y.desc_year = '2024-25';"
+  },
+  {
+    "id": 2035,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the total tax paid in cash (IGST + CGST + SGST) for GSTR-7 returns of the period November 2025?",
+    "gold_sql": "SELECT SUM(c.igst_tx + c.cgst_tx + c.sgst_tx) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tax_paid tp ON tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 JOIN public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c ON c.idtbl_gst_rtn_r7_tax_paid = tp.idtbl_gst_rtn_r7_tax_paid WHERE r.fp = '112025';"
+  },
+  {
+    "id": 2036,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "How many deductors have at least one GSTR-7 return with no tax-paid record?",
+    "gold_sql": "SELECT COUNT(DISTINCT r.gstin) AS n FROM public.tbl_gst_rtn_r7 r WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7);"
+  },
+  {
+    "id": 2037,
+    "module": "GSTREG",
+    "difficulty": "simple",
+    "category": "filtering",
+    "question": "What is the GSTIN of the casual dealer?",
+    "gold_sql": "SELECT d.gstin FROM common.t_all_delers_api_v_t d WHERE d.iscasdl = 'Y';"
+  },
+  {
+    "id": 2038,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "How many taxpayers have a registration end date recorded but no cancellation date?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.rgtodt IS NOT NULL AND d.canc_dt IS NULL;"
+  },
+  {
+    "id": 2039,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "How many registered taxpayers have never filed any GSTR-3B return?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin);"
+  },
+  {
+    "id": 2040,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "What is the total CGST amount of ITC reversed across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(v.camt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_rev v;"
+  },
+  {
+    "id": 2041,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the total CGST interest paid in cash across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(pc.c_intrpd) AS v FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc;"
+  },
+  {
+    "id": 2042,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "How many TDS amendments increased the base amount compared to the original?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa a WHERE a.amt_ded > a.oamt_ded;"
   }
 ]

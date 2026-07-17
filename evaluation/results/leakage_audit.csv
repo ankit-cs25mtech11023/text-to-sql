@@ -75,7 +75,7 @@ pool_id,pool_category,max_cosine,closest_eval_id,flagged_cosine,sql_template_twi
 1074,aggregation,0.9358,57,1,,What is the lowest net SGST ITC available on any single GSTR-3B return?,What is the average net SGST ITC available per GSTR-3B return?
 1075,aggregation,0.8698,88,0,,What is the average TDS (IGST + CGST + SGST) per deductee record?,What is the total IGST TDS withheld across all deductee records?
 1076,aggregation,0.9092,100,1,,What is the highest invoice value among invoice-level TDS rows?,What is the average invoice value across invoice-level TDS rows?
-1077,aggregation,0.9223,87,1,,How many invoice-level TDS amendment rows are there?,How many invoice-level TDS rows are there?
+1077,aggregation,0.9708,154,1,,How many invoice-level TDS amendment rows are there?,How many invoice-level TDS amendment rows are recorded?
 1078,aggregation,0.9009,93,1,,How many cash-settlement rows are recorded for GSTR-7 returns?,How many tax-payable rows are recorded for GSTR-7 returns?
 1079,aggregation,0.9211,100,1,,What is the lowest invoice value among invoice-level TDS rows?,What is the average invoice value across invoice-level TDS rows?
 1080,aggregation,0.8893,90,0,,What is the average base amount on which TDS was deducted at the invoice level?,What is the total base amount on which TDS was deducted?
@@ -111,7 +111,7 @@ pool_id,pool_category,max_cosine,closest_eval_id,flagged_cosine,sql_template_twi
 1110,filtering,0.8185,23,0,,How many e-way bills originate from Gujarat?,How many e-way bills originate from each state?
 1111,filtering,0.7972,1,0,,How many e-way bills are destined for Maharashtra?,How many e-way bills are there?
 1112,filtering,0.8569,27,0,,How many e-way bills declared a travel distance over 500 km?,"What is the average travel distance declared on e-way bills, in km?"
-1113,filtering,0.8678,15,0,,How many e-way bills have an assessable value above 100000?,What is the highest assessable value among all e-way bills?
+1113,filtering,0.9108,171,1,,How many e-way bills have an assessable value above 100000?,How many e-way bills have an assessable value above the average assessable value?
 1114,filtering,0.8547,46,0,,How many GSTR-3B returns reported outward taxable value above 1000000?,What is the total outward taxable value (regular sales) across all GSTR-3B returns?
 1115,filtering,0.8845,43,0,,How many GSTR-3B returns were filed in Division 1 (ABD)?,How many GSTR-3B returns were filed?
 1116,filtering,0.794,48,0,,How many GSTR-3B returns had positive net IGST input tax credit?,What is the total IGST payable across all GSTR-3B returns?
@@ -126,10 +126,10 @@ pool_id,pool_category,max_cosine,closest_eval_id,flagged_cosine,sql_template_twi
 1125,quirk,0.893,111,0,,What is the latest filing date among GSTR-3B returns?,What is the earliest filing date among all GSTR-7 returns?
 1126,quirk,0.9253,56,1,,How many distinct ranges appear in GSTR-3B returns for FY 2025-26?,How many distinct ranges appear in GSTR-3B returns?
 1127,quirk,0.9476,111,1,,What is the latest filing date among all GSTR-7 returns?,What is the earliest filing date among all GSTR-7 returns?
-1128,subquery,0.8785,15,0,,How many e-way bills have an assessable value above the overall average assessable value?,What is the highest assessable value among all e-way bills?
+1128,subquery,0.9967,171,1,,How many e-way bills have an assessable value above the overall average assessable value?,How many e-way bills have an assessable value above the average assessable value?
 1129,subquery,0.8764,41,0,,How many inter-state e-way bills have IGST above the average IGST of inter-state e-way bills?,How many e-way bills have a total tax (CGST+SGST+IGST) above the average?
-1130,subquery,0.8396,16,0,,How many e-way bill item lines have an assessable amount above the average line amount?,How many item lines are there across all e-way bills?
-1131,subquery,0.8171,41,0,,"How many taxpayers had a total net ITC (SGST + CGST + IGST) above the average taxpayer total, across all years?",How many e-way bills have a total tax (CGST+SGST+IGST) above the average?
+1130,subquery,0.9269,171,1,,How many e-way bill item lines have an assessable amount above the average line amount?,How many e-way bills have an assessable value above the average assessable value?
+1131,subquery,0.8288,136,0,,"How many taxpayers had a total net ITC (SGST + CGST + IGST) above the average taxpayer total, across all years?","Which taxpayers have a total net ITC (IGST + CGST + SGST) above 2,000,000?"
 1132,subquery,0.8724,46,0,,How many GSTR-3B returns have outward taxable value above the overall average return value?,What is the total outward taxable value (regular sales) across all GSTR-3B returns?
 1133,subquery,0.8736,61,0,,How many divisions have a total outward taxable value above the average division total?,What is the total outward taxable value for each division?
 1134,subquery,0.8279,97,0,,How many deductees had a total TDS above the average deductee's total TDS?,Which deductee had the highest total TDS deducted from them?
@@ -142,14 +142,45 @@ pool_id,pool_category,max_cosine,closest_eval_id,flagged_cosine,sql_template_twi
 1141,aggregation,0.845,88,0,,What is the average TDS deducted (IGST+CGST+SGST) per deductor?,What is the total IGST TDS withheld across all deductee records?
 1142,grouping,0.8731,96,0,,"For each deductor, what is the total TDS deducted (IGST+CGST+SGST) from each of their deductees?",What is the total TDS deducted from each deductee?
 1201,filtering,0.8467,121,0,,How many taxpayers have a proprietorship (PRO) constitution of business?,How many taxpayers fall under each constitution of business?
-1202,domain_specific,0.7469,116,0,,What is the trade name of the taxpayer with GSTIN 24AAAAR0001A9AA?,What is the GSTIN of the taxpayer whose trade name is Ahmedabad Steel Works?
+1202,domain_specific,0.8399,169,0,,What is the trade name of the taxpayer with GSTIN 24AAAAR0001A9AA?,What is the trade name of the taxpayer whose GSTIN appears as consignor on the most e-way bills?
 1203,decode,0.7897,118,0,,What are the range and unit for the taxpayer Surat Textiles Pvt Ltd?,"What are the division, range and unit for the taxpayer Gujarat Cement Ltd?"
 1204,grouping,0.905,120,1,,How many taxpayers are there in each jurisdiction range?,How many taxpayers are there in each jurisdiction division?
 1205,grouping,0.7512,125,0,,How many taxpayers fall under each risk profile?,List the GSTINs of taxpayers with a low risk profile.
 1206,filtering,0.9176,119,1,,How many taxpayers are registered under CENTER approving authority?,How many taxpayers are registered under each approving authority?
-1207,filtering,0.786,124,0,,List the trade names of taxpayers whose registration has been cancelled.,Which taxpayers filed GSTR-3B returns but have since cancelled their registration?
+1207,filtering,0.7957,144,0,,List the trade names of taxpayers whose registration has been cancelled.,How many GSTR-3B returns were filed by taxpayers whose registration is now cancelled?
 1208,decode,0.7803,120,0,,How many taxpayers are in the division named Division 2 (ABD)?,How many taxpayers are there in each jurisdiction division?
 1209,domain_specific,0.8618,122,0,,List the trade names of taxpayers with a low risk profile under STATE approving authority.,List the trade names of taxpayers with a medium risk profile.
 1210,join,0.8228,61,0,,What is the total outward taxable value filed by taxpayers located in Division 3 (ABD)?,What is the total outward taxable value for each division?
 1211,domain_specific,0.671,116,0,,What is the constitution of business of the taxpayer Gujarat Pharma Corp?,What is the GSTIN of the taxpayer whose trade name is Ahmedabad Steel Works?
 1212,having,0.8916,120,0,,Which jurisdiction divisions have more than 2 registered taxpayers?,How many taxpayers are there in each jurisdiction division?
+1213,decode,0.9083,134,1,,Which month of financial year 2025-26 had the lowest total outward taxable value?,Which quarter of financial year 2024-25 recorded the lowest total outward taxable value?
+1214,decode,0.9354,74,1,,What is the total outward taxable value in the quarter named Q1 of financial year 2024-25?,What is the total outward taxable value per quarter in FY 2024-25?
+1215,having,0.7735,134,0,,"List the month names of financial year 2024-25 whose total outward taxable value was below 15,000,000.",Which quarter of financial year 2024-25 recorded the lowest total outward taxable value?
+1216,subquery,0.853,127,0,,Which GSTINs filed a GSTR-3B return in every month of financial year 2025-26?,Which GSTIN filed a GSTR-3B return for May 2025 but not for June 2025?
+1217,having,0.8308,53,0,,List the return periods of financial year 2025-26 with fewer than 5 GSTR-3B returns filed.,How many GSTR-3B returns were filed in financial year 2025-26?
+1218,join,0.8364,161,0,,Which registered taxpayers have generated at least one e-way bill as consignor?,Which registered taxpayers appear neither as GSTR-3B filers nor as consignors or consignees on any e-way bill?
+1219,join,0.9392,160,1,,How many currently active taxpayers have never filed a GSTR-3B return?,Which registered taxpayers have never filed a GSTR-3B return?
+1220,domain_specific,0.8643,129,0,,What is the total late fee paid in cash (all components) across all GSTR-3B returns?,What is the total interest paid in cash (all components) across all GSTR-3B returns?
+1221,filtering,0.8314,130,0,,How many GSTR-3B cash payment lines are interest transactions rather than tax payments?,Which taxpayers paid interest as part of their GSTR-3B cash payments?
+1222,aggregation,0.943,105,1,,What is the total tax payable (IGST + CGST + SGST) declared by deductor 27AABCP0001K1ZM across its GSTR-7 returns?,What is the total tax payable (IGST + CGST + SGST) declared across all GSTR-7 returns?
+1223,domain_specific,0.922,145,1,,Which GSTR-7 returns (deductor and period) paid less tax in cash than the payable declared on that return?,"Which deductors paid less tax in cash than the tax they declared payable, in total across their GSTR-7 returns?"
+1224,aggregation,0.8975,106,0,,What is the total IGST tax paid in cash for GSTR-7 returns of the period December 2025?,What is the total tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?
+1225,subquery,0.8023,133,0,,How many GSTR-7 returns have no cash payment rows at all?,How many GSTR-3B returns have no reverse-charge inward supply row at all?
+1226,filtering,0.8152,149,0,,List the distinct deductee GSTINs whose TDS records were amended.,Which deductee GSTINs appear in the TDS records of more than one deductor?
+1227,aggregation,0.8948,152,0,,What is the total original TDS base amount across all TDS amendments?,What is the total change in TDS base amount introduced by amendments (revised minus original)?
+1228,filtering,0.7954,152,0,,Which deductee GSTIN had its TDS base amount reduced by an amendment?,What is the total change in TDS base amount introduced by amendments (revised minus original)?
+1229,aggregation,0.9717,85,1,,How many distinct deductee names appear in GSTR-7 TDS records?,How many distinct deductees appear in GSTR-7 TDS records?
+1230,having,0.9609,149,1,,Which deductee GSTINs appear in TDS records under more than one distinct deductee name?,Which deductee GSTINs appear in the TDS records of more than one deductor?
+1231,filtering,0.7595,144,0,,List the trade names of taxpayers whose registration was cancelled during the year 2024.,How many GSTR-3B returns were filed by taxpayers whose registration is now cancelled?
+1232,decode,0.7176,126,0,,Which taxpayer is registered in the unit named Ghatak 9 (MSA)?,What is the unit (ghatak) for the taxpayer Rajkot Auto Parts?
+1233,grouping,0.911,168,1,,How many taxpayers are registered in each jurisdiction range?,Which jurisdiction range has the most registered taxpayers?
+1234,filtering,0.7554,126,0,,What is the cancellation date recorded for the taxpayer Rajkot Auto Parts?,What is the unit (ghatak) for the taxpayer Rajkot Auto Parts?
+1235,filtering,0.7824,125,0,,Which taxpayers have a low risk profile and CENTER approving authority?,List the GSTINs of taxpayers with a low risk profile.
+1236,join,0.802,115,0,,What is the total outward taxable value declared by taxpayers whose registration is cancelled?,How many taxpayers have had their registration cancelled?
+1237,join,0.8985,44,0,,How many distinct taxpayers under STATE approving authority have filed at least one GSTR-3B return?,How many distinct taxpayers filed GSTR-3B?
+1238,join,0.8116,37,0,,What is the total assessable value of e-way bills whose consignor GSTIN belongs to a registered dealer?,What is the total assessable value of e-way bills for each status?
+1239,ranking,0.8343,163,0,,Which jurisdiction division paid the most GSTR-3B tax in cash during financial year 2025-26?,Which jurisdiction division has the highest total outward taxable value across all GSTR-3B returns?
+1240,join,0.8261,76,0,,What is the total net ITC (IGST + CGST + SGST + cess) claimed by taxpayers in Division 1 (ABD)?,What is the total tax payable (SGST + CGST + IGST) for each division?
+1241,aggregation,0.9573,140,1,,What is the total inter-state inward GST supply value across all GSTR-3B returns?,What is the total non-GST inward supply value (inter-state plus intra-state) across all GSTR-3B returns?
+1242,domain_specific,0.8886,141,0,,What is the total ineligible ITC (IGST + CGST + SGST + cess) recorded across all GSTR-3B returns?,What is the total ITC reversed (IGST + CGST + SGST + cess) across all GSTR-3B returns?
+1243,ranking,0.773,128,0,,Which taxpayer claimed the highest total ITC available (all components) in financial year 2024-25?,Which month of financial year 2024-25 had the highest total outward taxable value?

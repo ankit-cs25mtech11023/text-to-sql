@@ -1020,5 +1020,379 @@
     "category": "decode",
     "question": "What is the unit (ghatak) for the taxpayer Rajkot Auto Parts?",
     "gold_sql": "SELECT j.unit FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Rajkot Auto Parts%';"
+  },
+  {
+    "id": 127,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "Which GSTIN filed a GSTR-3B return for May 2025 but not for June 2025?",
+    "gold_sql": "SELECT r.gstin FROM public.tbl_gst_rtn_r3b r WHERE r.ret_period = '052025' AND NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r2 WHERE r2.gstin = r.gstin AND r2.ret_period = '062025');"
+  },
+  {
+    "id": 128,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "decode",
+    "question": "Which month of financial year 2024-25 had the highest total outward taxable value?",
+    "gold_sql": "SELECT m.month_desc FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE y.desc_year = '2024-25' GROUP BY m.month_desc ORDER BY SUM(o.txval) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 129,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the total interest paid in cash (all components) across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(pc.i_intrpd + pc.c_intrpd + pc.s_intrpd + pc.cs_intrpd) AS v FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc;"
+  },
+  {
+    "id": 130,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "Which taxpayers paid interest as part of their GSTR-3B cash payments?",
+    "gold_sql": "SELECT DISTINCT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt WHERE pc.i_intrpd + pc.c_intrpd + pc.s_intrpd + pc.cs_intrpd > 0;"
+  },
+  {
+    "id": 131,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "Which GSTIN and return period has a payment section with neither cash nor ITC payment lines?",
+    "gold_sql": "SELECT r.gstin, r.ret_period FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash c WHERE c.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt) AND NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_itc i WHERE i.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt);"
+  },
+  {
+    "id": 132,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "How many GSTR-3B returns declared reverse-charge inward supplies with a taxable value of exactly zero?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b_sup_details_isuprev iv WHERE iv.txval = 0;"
+  },
+  {
+    "id": 133,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "How many GSTR-3B returns have no reverse-charge inward supply row at all?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_sup_details_isuprev iv WHERE iv.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details);"
+  },
+  {
+    "id": 134,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "decode",
+    "question": "Which quarter of financial year 2024-25 recorded the lowest total outward taxable value?",
+    "gold_sql": "SELECT m.quarter FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE y.desc_year = '2024-25' GROUP BY m.quarter ORDER BY SUM(o.txval) ASC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 135,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "having",
+    "question": "Which taxpayers filed fewer than 9 GSTR-3B returns in total?",
+    "gold_sql": "SELECT r.gstin FROM public.tbl_gst_rtn_r3b r GROUP BY r.gstin HAVING COUNT(*) < 9;"
+  },
+  {
+    "id": 136,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "having",
+    "question": "Which taxpayers have a total net ITC (IGST + CGST + SGST) above 2,000,000?",
+    "gold_sql": "SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg GROUP BY r.gstin HAVING SUM(n.iamt + n.camt + n.samt) > 2000000;"
+  },
+  {
+    "id": 137,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "What is the total reverse-charge ITC (IGST + CGST + SGST) claimed as available across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(a.iamt + a.camt + a.samt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_avl a WHERE a.ty = 'ISRC';"
+  },
+  {
+    "id": 138,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the average outward taxable value per return for the period August 2024?",
+    "gold_sql": "SELECT AVG(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE r.ret_period = '082024';"
+  },
+  {
+    "id": 139,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "grouping",
+    "question": "What is the total inward supply value (inter-state plus intra-state) of GST-type inward supplies per taxpayer?",
+    "gold_sql": "SELECT r.gstin, SUM(i.inter + i.intra) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_inward_sup w ON w.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_inward_sup_isup_details i ON i.idtbl_gst_rtn_r3b_inward_sup = w.idtbl_gst_rtn_r3b_inward_sup WHERE i.ty = 'GST' GROUP BY r.gstin;"
+  },
+  {
+    "id": 140,
+    "module": "GSTR-3B",
+    "difficulty": "simple",
+    "category": "aggregation",
+    "question": "What is the total non-GST inward supply value (inter-state plus intra-state) across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(i.inter + i.intra) AS v FROM public.tbl_gst_rtn_r3b_inward_sup_isup_details i WHERE i.ty = 'NONGST';"
+  },
+  {
+    "id": 141,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "What is the total ITC reversed (IGST + CGST + SGST + cess) across all GSTR-3B returns?",
+    "gold_sql": "SELECT SUM(v.iamt + v.camt + v.samt + v.csamt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_rev v;"
+  },
+  {
+    "id": 142,
+    "module": "GSTR-3B",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "Which return periods have a total outward taxable value above the average across all return periods?",
+    "gold_sql": "SELECT q.ret_period FROM (SELECT r.ret_period, SUM(o.txval) AS s FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details GROUP BY r.ret_period) q WHERE q.s > (SELECT AVG(s2.s) FROM (SELECT SUM(o2.txval) AS s FROM public.tbl_gst_rtn_r3b r2 JOIN public.tbl_gst_rtn_r3b_sup_details sd2 ON sd2.idtbl_gst_rtn_r3b = r2.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o2 ON o2.idtbl_gst_rtn_r3b_sup_details = sd2.idtbl_gst_rtn_r3b_sup_details GROUP BY r2.ret_period) s2);"
+  },
+  {
+    "id": 143,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "quirk",
+    "question": "On which date was the GSTR-3B return of GSTIN 24AABCE0003F9AA for the period September 2024 filed?",
+    "gold_sql": "SELECT TO_DATE(r.fil_dt, 'DD-MM-YYYY') AS v FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = '24AABCE0003F9AA' AND r.ret_period = '092024';"
+  },
+  {
+    "id": 144,
+    "module": "GSTR-3B",
+    "difficulty": "moderate",
+    "category": "join",
+    "question": "How many GSTR-3B returns were filed by taxpayers whose registration is now cancelled?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin WHERE d.canc_dt IS NOT NULL;"
+  },
+  {
+    "id": 145,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "Which deductors paid less tax in cash than the tax they declared payable, in total across their GSTR-7 returns?",
+    "gold_sql": "SELECT pay.gstin FROM (SELECT r.gstin, SUM(p.igst_tx + p.cgst_tx + p.sgst_tx) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tax_pay p ON p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin) pay LEFT JOIN (SELECT r.gstin, SUM(c.igst_tx + c.cgst_tx + c.sgst_tx) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tax_paid tp ON tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 JOIN public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c ON c.idtbl_gst_rtn_r7_tax_paid = tp.idtbl_gst_rtn_r7_tax_paid GROUP BY r.gstin) paid ON paid.gstin = pay.gstin WHERE COALESCE(paid.v, 0) < pay.v;"
+  },
+  {
+    "id": 146,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "aggregation",
+    "question": "What is the total shortfall between declared tax payable and tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?",
+    "gold_sql": "SELECT (SELECT SUM(p.igst_tx + p.cgst_tx + p.sgst_tx) FROM public.tbl_gst_rtn_r7_tax_pay p) - (SELECT SUM(c.igst_tx + c.cgst_tx + c.sgst_tx) FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c) AS v;"
+  },
+  {
+    "id": 147,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "subquery",
+    "question": "Which deductor and return period has no tax-paid record?",
+    "gold_sql": "SELECT r.gstin, r.fp FROM public.tbl_gst_rtn_r7 r WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7);"
+  },
+  {
+    "id": 148,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "How many GSTR-7 returns have a tax-paid record?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7 r WHERE EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7);"
+  },
+  {
+    "id": 149,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "having",
+    "question": "Which deductee GSTINs appear in the TDS records of more than one deductor?",
+    "gold_sql": "SELECT t.gstin_ded FROM public.tbl_gst_rtn_r7_tds t JOIN public.tbl_gst_rtn_r7 r ON r.idtbl_gst_rtn_r7 = t.tbl_gst_rtn_r7 GROUP BY t.gstin_ded HAVING COUNT(DISTINCT r.gstin) > 1;"
+  },
+  {
+    "id": 150,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "having",
+    "question": "Which deductee names are shared by more than one distinct deductee GSTIN?",
+    "gold_sql": "SELECT t.deductee_name FROM public.tbl_gst_rtn_r7_tds t GROUP BY t.deductee_name HAVING COUNT(DISTINCT t.gstin_ded) > 1;"
+  },
+  {
+    "id": 151,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "aggregation",
+    "question": "What is the total revised TDS amount (IGST + CGST + SGST) across all TDS amendments?",
+    "gold_sql": "SELECT SUM(a.iamt + a.camt + a.samt) AS v FROM public.tbl_gst_rtn_r7_tdsa a;"
+  },
+  {
+    "id": 152,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "What is the total change in TDS base amount introduced by amendments (revised minus original)?",
+    "gold_sql": "SELECT SUM(a.amt_ded - a.oamt_ded) AS v FROM public.tbl_gst_rtn_r7_tdsa a;"
+  },
+  {
+    "id": 153,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "ranking",
+    "question": "Which deductor has the highest total revised TDS (IGST + CGST + SGST) in amendments?",
+    "gold_sql": "SELECT r.gstin FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tdsa a ON a.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin ORDER BY SUM(a.iamt + a.camt + a.samt) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 154,
+    "module": "GSTR-7",
+    "difficulty": "simple",
+    "category": "aggregation",
+    "question": "How many invoice-level TDS amendment rows are recorded?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa_inv a;"
+  },
+  {
+    "id": 155,
+    "module": "GSTR-7",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "What is the total TDS (IGST + CGST + SGST) withheld from deductees named 'MH Engineering Works'?",
+    "gold_sql": "SELECT SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7_tds t WHERE t.deductee_name = 'MH Engineering Works';"
+  },
+  {
+    "id": 156,
+    "module": "GSTR-7",
+    "difficulty": "moderate",
+    "category": "quirk",
+    "question": "How many GSTR-7 returns were filed after 28 November 2025?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7 r WHERE TO_DATE(r.fil_dt, 'DD-MM-YYYY') > TO_DATE('28-11-2025', 'DD-MM-YYYY');"
+  },
+  {
+    "id": 157,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "filtering",
+    "question": "What is the trade name of the taxpayer holding a casual registration?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.iscasdl = 'Y';"
+  },
+  {
+    "id": 158,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "Which taxpayers have a registration validity end date while still not cancelled?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.rgtodt IS NOT NULL AND d.canc_dt IS NULL;"
+  },
+  {
+    "id": 159,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "domain_specific",
+    "question": "Which cancelled taxpayer has a cancellation date different from its registration end date?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.canc_dt IS NOT NULL AND d.rgtodt IS NOT NULL AND d.canc_dt <> d.rgtodt;"
+  },
+  {
+    "id": 160,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "Which registered taxpayers have never filed a GSTR-3B return?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin);"
+  },
+  {
+    "id": 161,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "Which registered taxpayers appear neither as GSTR-3B filers nor as consignors or consignees on any e-way bill?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin) AND NOT EXISTS (SELECT 1 FROM public.tbl_ewb_parta_ewb e WHERE e.frgstin = d.gstin OR e.togstin = d.gstin);"
+  },
+  {
+    "id": 162,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "grouping",
+    "question": "How many GSTR-3B returns were filed by taxpayers in each jurisdiction division?",
+    "gold_sql": "SELECT j.division, COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.division;"
+  },
+  {
+    "id": 163,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "ranking",
+    "question": "Which jurisdiction division has the highest total outward taxable value across all GSTR-3B returns?",
+    "gold_sql": "SELECT j.division FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division ORDER BY SUM(o.txval) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 164,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "join",
+    "question": "What are the trade names of the taxpayers who filed a GSTR-3B return for June 2025?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d JOIN public.tbl_gst_rtn_r3b r ON r.gstin = d.gstin WHERE r.ret_period = '062025' ORDER BY d.trdnm;"
+  },
+  {
+    "id": 165,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "domain_specific",
+    "question": "How many taxpayers registered under STATE approving authority have a cancelled registration?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.appr_auth = 'STATE' AND d.canc_dt IS NOT NULL;"
+  },
+  {
+    "id": 166,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "decode",
+    "question": "Which jurisdiction division does the taxpayer Mehsana Agro Traders belong to?",
+    "gold_sql": "SELECT j.division FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Mehsana Agro Traders%';"
+  },
+  {
+    "id": 167,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "having",
+    "question": "Which jurisdiction divisions contain more than one cancelled taxpayer?",
+    "gold_sql": "SELECT j.division FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.canc_dt IS NOT NULL GROUP BY j.division HAVING COUNT(*) > 1;"
+  },
+  {
+    "id": 168,
+    "module": "GSTREG",
+    "difficulty": "moderate",
+    "category": "ranking",
+    "question": "Which jurisdiction range has the most registered taxpayers?",
+    "gold_sql": "SELECT j.\"range\" FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.\"range\" ORDER BY COUNT(*) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 169,
+    "module": "GSTREG",
+    "difficulty": "challenging",
+    "category": "join",
+    "question": "What is the trade name of the taxpayer whose GSTIN appears as consignor on the most e-way bills?",
+    "gold_sql": "SELECT d.trdnm FROM common.t_all_delers_api_v_t d JOIN public.tbl_ewb_parta_ewb e ON e.frgstin = d.gstin GROUP BY d.trdnm ORDER BY COUNT(*) DESC LIMIT 1;",
+    "order_matters": true
+  },
+  {
+    "id": 170,
+    "module": "GSTREG",
+    "difficulty": "simple",
+    "category": "filtering",
+    "question": "How many registered taxpayers are casual dealers?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.iscasdl = 'Y';"
+  },
+  {
+    "id": 171,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "subquery",
+    "question": "How many e-way bills have an assessable value above the average assessable value?",
+    "gold_sql": "SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb e WHERE e.assval > (SELECT AVG(assval) FROM public.tbl_ewb_parta_ewb);"
+  },
+  {
+    "id": 172,
+    "module": "EWB",
+    "difficulty": "moderate",
+    "category": "having",
+    "question": "Which consignee names received more than 2 e-way bills?",
+    "gold_sql": "SELECT e.toname FROM public.tbl_ewb_parta_ewb e GROUP BY e.toname HAVING COUNT(*) > 2;"
   }
 ]
