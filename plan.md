@@ -914,6 +914,19 @@ stray trailing `-`.
 **Pipeline is schema-agnostic** — only `database/` + descriptions + gold/pool data change; `core/` is
 untouched.
 
+**Status (2026-07-17): adversarial re-seed (Option B+) DONE.** The open distinguishability decision was
+answered as **B+ extended** — re-seed to break collisions AND expand gold (126→~160–180) / pool /
+held-out AND review all existing items. Two audit-looped seed-edit rounds (spec: `reseed_design.md`,
+local) landed 9 fix packages (month factors, filing gap, per-profile section fractions, RCM spread,
+GSTR-7 varied/partial/unpaid payments, deductee mix, tdsa rework, GSTREG casual/never-filed dealers,
+cs_intrpd belt) + `verify()` grown to 15 invariant checks. Result: **24 → 11 colliding questions
+(8.7%), all 11 domain-invariant** (CGST=SGST equal-split, intra-state igst=0, always-true-filter —
+law-level equalities that collide on real data too; ids {3,8,9,41,47,58,65,68,75,96,106}). All 15
+seed-fixable targets plus 2 new-found ({85,97}) cleared; table-swap mutator 0/89. All 312 existing
+items re-verified executable/non-empty on the new seed. This is the unavoidable residual bound to
+document in the thesis. Remaining before step-6 v2 runs: review existing golds/pool/held-out, expand
+sets, final leakage + distinguishability audits on the expanded sets.
+
 ---
 
 ## Phase 9: Validity Hardening (review-driven, examiner-proofing)
