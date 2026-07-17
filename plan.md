@@ -916,8 +916,8 @@ untouched.
 
 **Status (2026-07-17): adversarial re-seed (Option B+) + eval-set expansion DONE.** The open
 distinguishability decision was answered as **B+ extended** — re-seed to break collisions AND expand
-gold/pool/held-out AND review all existing items. THREE audit-looped seed-edit rounds (spec:
-`reseed_design.md`, local) landed the 9 fix packages (month factors, filing gap, per-profile section
+gold/pool/held-out AND review all existing items. THREE audit-looped seed-edit rounds (spec now in the
+seed-script comments + commits `dc4cd70`/`77f1784`/`d782448`) landed the 9 fix packages (month factors, filing gap, per-profile section
 fractions, RCM spread, GSTR-7 varied/partial/unpaid payments, deductee mix, tdsa rework, GSTREG
 casual/never-filed dealers, cs_intrpd belt) plus round-3 fixes for collisions surfaced by the new
 golds (monthly-constant nilexmp/nongst/isuprev, RCM spike + inter-state RCM, cash-only/ITC-only
@@ -938,8 +938,27 @@ distinguishability: 21/171 (12.3%) collide — ALL domain-invariant classes, 0 s
 legacy (CGST=SGST equal-split, intra-igst=0, always-true-filter: {3,8,9,41,47,58,65,68,75,96,106}) +
 10 new-gold classes ({137,141,151,155} CGST=SGST swaps; {153} uniform-2%-TDS-rate; {128,142}
 proportional-tax argmax; {134} single-FY quarter shape; {159} SQL NULL-semantics; {163} id-column-sum
-mutator artifact). This is the documented residual bound. Remaining: step-6 v2 full runs (archive v1
-CSVs first; needs vLLM tunnel).
+mutator artifact). This is the documented residual bound.
+
+**v2-prep cleanup DONE (2026-07-17, pushed `252b287`).** Before the v2 model runs, the branch was
+made pure-v2: (1) **v1 3-module results archived** — all model CSVs, stats, ablations, traces, and the
+v1 manifest (36 files) `git mv`'d to `results/archive_v1_3module/`; the v2 data-audits
+(distinguishability, leakage) stay at top level. (2) **v1-stale refs purged branch-wide** — dead
+`live_reports` schema tokens dropped from `distinguishability_audit.py` (removal proven inert by a
+byte-identical audit re-run, 21/171 unchanged), the flat-MV fixture in `test_sql_validator.py` swapped
+to `public.tbl_gst_rtn_r3b`, the dropped `state_income` UI example replaced with a GSTREG question,
+`112→172` docstrings, and both READMEs (`results/`, `evaluation/`) rewritten for v2. Verified NOT
+stale and kept: the seed's `DROP SCHEMA live_reports` (migration), `test_stats` math fixtures,
+`fy_flag`/`mnth_id` (real v2 columns). (3) **FAISS index + Layer-1 intrinsic regenerated on the v2
+39-table schema** — few-shot **hybrid same-both@5 87.8%** (kept) > semantic 84.3%; schema
+**k5+core-on recall 86.4% / full-cover 71.5% / decode 54.5%** (lower than v1's 98.2/96.4 as expected —
+the normalized GSTR-3B spans many leaf tables, its full-coverage the weak spot). (4) redundant
+`database/New_schemas/` staging + the now-done `reseed_design.md` spec removed; 54 tests green.
+
+**Only remaining Phase-8 item: step-6 v2 model runs** — 4 configs (baseline / schema-only / few-shot /
+full RAG) × 2 models (XiYanSQL-7B primary + Qwen-27B upper-bound) × runs=3 on the 172 gold set +
+held-out 42 run-once → v2 2×2 tables + `stats.py` (McNemar/Wilson) → merge. v1 already archived; gated
+on the HPC vLLM tunnel + Qwen API.
 
 ---
 
