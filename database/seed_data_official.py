@@ -639,7 +639,7 @@ DDL_GSTR7 = [
 # Adversarial levers baked in: distinct base turnover magnitudes, distinct
 # igst_frac (top-by-IGST != top-by-turnover), distinct pur_frac (top-by-ITC a
 # THIRD taxpayer), 2 cancelled taxpayers (canc_dt IS NOT NULL), asymmetric
-# division membership (Div1=4 incl. never-filer, Div2=3, Div3=2).
+# division membership (Div1=5 incl. the two non-filers, Div2=3, Div3=2).
 # Re-seed round 2 (distinguishability fix, reseed_design.md): per-profile
 # SECTION FRACTIONS (zero/nil/nongst/rv) whose orderings are decoupled from the
 # base-turnover ordering -> section-table swaps break on ranking/argmax golds;
@@ -685,7 +685,10 @@ R3B_PROFILES = [
          zero=0.30, nil=0.05, nongst=0.012, rv=0.012),
     dict(gstin='24AACCD0001G9AA', trdnm='BARODA FOODS LTD',
          lgnm='BARODA FOODS LIMITED', base=511_111, rate=0.025,
-         igst_frac=0.00, pur_frac=0.70, auth='STATE', stjd='GJ057', ctjd='VC0507',
+         # CENTER (not STATE): the two cancelled dealers must not share an
+         # authority, else dropping an authority filter reproduces the
+         # cancelled-count answer (audit round 3, #165)
+         igst_frac=0.00, pur_frac=0.70, auth='CENTER', stjd='GJ057', ctjd='VC0507',
          division='Division 3 (ABD)', range='Range 5 (ABD)', unit='Ghatak 7 (ABD)',
          ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=True,
          zero=0.15, nil=0.11, nongst=0.06, rv=0.0,
@@ -699,9 +702,11 @@ R3B_PROFILES = [
          canc_dt=date(2024, 12, 15), rgtodt=date(2024, 11, 30), canc_mnth='122024'),
 ]
 
-# Registered dealer with ZERO filed returns (any module) -> COUNT(dealers) can
-# never collide with COUNT(DISTINCT filers). Div1 membership keeps division
-# rollups asymmetric (4/3/2).
+# Registered dealers with ZERO filed 3B returns -> COUNT(dealers) can never
+# collide with COUNT(DISTINCT filers). Div1 membership keeps division rollups
+# asymmetric (5/3/2). MEHSANA appears in NO module; GANDHINAGAR appears in EWB
+# only (consignee on bill 17) so a "never filed 3B AND absent from EWB"
+# question loses a leg-drop collision (audit round 3, #161).
 NONFILER_DEALERS = [
     dict(gstin='24AADDF0001Z9AA', trdnm='MEHSANA AGRO TRADERS',
          lgnm='MEHSANA AGRO TRADERS PROPRIETORSHIP', auth='STATE',
@@ -709,6 +714,23 @@ NONFILER_DEALERS = [
          division='Division 1 (ABD)', range='Range 1 (ABD)', unit='Ghatak 9 (MSA)',
          ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=False,
          rgfmdt=date(2025, 6, 1), apprvdt=date(2025, 6, 4), apprv_mnth='062025'),
+    dict(gstin='24AAEEG0001X9AA', trdnm='GANDHINAGAR LOGISTICS',
+         lgnm='GANDHINAGAR LOGISTICS PARK PVT LTD', auth='STATE',
+         stjd='GJ014', ctjd='VC0104',
+         division='Division 1 (ABD)', range='Range 1 (ABD)', unit='Ghatak 10 (GNR)',
+         ntcrbs='Service Provider', cobz='PVT', risk='LOW_RISK(1.00)', cancelled=False,
+         rgfmdt=date(2024, 2, 1), apprvdt=date(2024, 2, 5), apprv_mnth='022024'),
+    # Consignor-ONLY EWB presence (bills 18-20) + CANCELLED + non-Gujarat: kills
+    # the remaining #161 column-swap variants (a dealer the frgstin leg alone
+    # excludes) and #167's drop-HAVING (a second division with a cancelled
+    # dealer). canc_dt == rgtodt here; RAJKOT stays the differing pair.
+    dict(gstin='08AABCR0001G1Z1', trdnm='RAJASTHAN CEMENT WORKS',
+         lgnm='RAJASTHAN CEMENT WORKS LIMITED', auth='STATE',
+         stjd='RJ001', ctjd='VJ0101',
+         division='Division 1 (JPR)', range='Range 1 (JPR)', unit='Ghatak 1 (JPR)',
+         ntcrbs='Manufacturer', cobz='PVT', risk='MEDIUM_RISK(5.00)', cancelled=True,
+         rgfmdt=date(2019, 4, 1), apprvdt=date(2019, 4, 6), apprv_mnth='042019',
+         canc_dt=date(2026, 6, 30), rgtodt=date(2026, 6, 30), canc_mnth='062026'),
 ]
 
 # Per-month activity factors (multiply every supply-section value; ITC side
@@ -736,6 +758,10 @@ R3B_SKIPPED_FILINGS = {('24AABCE0001D9AA', '062025')}          # SURAT skips Jun
 # SANGH's FY9 returns (row absent) + PHARMA Apr/May-2024 (row present, txval 0).
 RCM_ABSENT = {('24AAAAR0001A9AA', rp) for rp in ('042025', '052025', '062025')}
 RCM_ZERO_ROW = {('24AAAAR0003C9AA', '042024'), ('24AAAAR0003C9AA', '052024')}
+# One-month RCM spike: July-2024 is the strict busiest isuprev month, so a
+# section table-swap cannot reproduce any osupdet month ranking (August tops
+# osupdet; without this, constant monthly RCM leaves a many-way tie).
+RCM_SPIKE = {('24AABCE0001D9AA', '072024'): 2.0}
 
 # Return period (MMYYYY) -> (mnth_id, fy_flag, month_name, mnth_cd, quarter, quarter_all)
 # fy_flag 8 = FY2024-25, 9 = FY2025-26. `quarter` populated only on closing month.
@@ -869,7 +895,9 @@ def seed_ewb(cur) -> None:
     B3 = ('24AAAAR0002A9AA', 'Gujarat Pharma Ltd',         'Surat',     '395001', '24')
     B4 = ('27AABCP0002K1ZM', 'Mumbai Trading Co',          'Mumbai',    '400001', '27')
     B5 = ('08AABCR0002G1Z1', 'Rajasthan Retail Corp',      'Jaipur',    '302001', '8')
-    B6 = ('08AABCR0003K1Z9', 'Bikaner Distributors',       'Bikaner',   '334001', '8')
+    # B6 = registered dealer GANDHINAGAR LOGISTICS (gstreg dealer #10): its EWB
+    # presence is what a cross-module "absent everywhere" question must check
+    B6 = ('24AAEEG0001X9AA', 'Gandhinagar Logistics',      'Gandhinagar', '382010', '24')
 
     def ewb_row(eid, ewbno, fr, to, assval, cgst, sgst, igst, status, dist, batch_id, day):
         inv_val = r2(assval + cgst + sgst + igst)
@@ -908,7 +936,7 @@ def seed_ewb(cur) -> None:
         ewb_row(15, '392234140015', C3, B5, 155000.00,     0,     0, 27900.00, 'ACT', 700, 3, 19),
         ewb_row(16, '392234140016', C4, B5, 290000.00,     0,     0, 52200.00, 'ACT', 800, 4, 20),
         ewb_row(17, '392234140017', C4, B6, 170000.00,     0,     0, 20400.00, 'ACT', 600, 4, 21),
-        ewb_row(18, '392234140018', C5, B3, 310000.00,     0,     0, 55800.00, 'CNL', 700, 5, 22),
+        ewb_row(18, '392234140018', C5, B4, 310000.00,     0,     0, 55800.00, 'CNL', 700, 5, 22),
         ewb_row(19, '392234140019', C5, B4,  88000.00,     0,     0,  4400.00, 'CNL', 800, 5, 23),
         ewb_row(20, '392234140020', C5, B1, 200000.00,     0,     0, 36000.00, 'EXP',1100, 5, 24),
     ]
@@ -1053,6 +1081,11 @@ def seed_gstr3b(cur) -> None:
 
     UNPAID = (5, '092024')      # GUJARAT CEMENT, Sep 2024 -> tx_pmt with NO cash/itc children
     INTEREST = (0, '042024')    # SANGH TEXTILES, Apr 2024 -> extra 30003 interest/late-fee cash line
+    # audit round 3: interest/late-fee spread + payment-mode variety
+    INTEREST_IGST_ONLY = (1, '072024')   # PATEL: 30003 line with i_intrpd ONLY (interest-component swaps diverge)
+    LATE_FEE_ONLY = (3, '052024')        # SURAT: late fee on its 30002 tax line, no interest
+    CASH_ONLY = (1, '062024')            # PATEL: pays via cash only (no pd_itc row)
+    ITC_ONLY = (6, '082024')             # BARODA: pays via ITC only (no pd_cash row)
 
     plan = [(i, p, rp) for i, p in enumerate(R3B_PROFILES) for rp in R3B_FY8_PERIODS]
     plan += [(i, p, rp) for i, p in enumerate(R3B_PROFILES[:5]) for rp in R3B_FY9_PERIODS]
@@ -1078,21 +1111,32 @@ def seed_gstr3b(cur) -> None:
         rows['isupd'].append((nid('isupd'), 'GST',    r2(Tm * 0.04), r2(Tm * 0.08), iw))
         rows['isupd'].append((nid('isupd'), 'NONGST', r2(Tm * 0.01), r2(Tm * 0.02), iw))
 
-        # supply details — per-profile section fractions, month-scaled
+        # supply details — per-profile section fractions. osupdet/osupzero are
+        # month-scaled (fm); nilexmp/nongst/isuprev are monthly-CONSTANT (T, not
+        # Tm) so their per-month profile decouples from osupdet's -- a section
+        # table-swap must not reproduce month-scoped osupdet answers (audit
+        # round 3: #128/#134/#142). FY totals unchanged (factors sum-preserve).
         sd = nid('sd'); rows['sd'].append((sd, rid))
         o_c = r2(intra * r); o_s = o_c; o_i = r2(inter * 2 * r)
         rows['osupdet'].append((nid('osupdet'), r2(Tm), o_i, o_c, o_s, 0, sd))
         z = r2(Tm * p['zero'])
         rows['osupzero'].append((nid('osupzero'), z, r2(z * 0.02), 0, 0, 0, sd))
-        rows['osupnil'].append((nid('osupnil'), r2(Tm * p['nil']), 0, 0, 0, 0, sd))
-        rows['osupnongst'].append((nid('osupnongst'), r2(Tm * p['nongst']), 0, 0, 0, 0, sd))
+        rows['osupnil'].append((nid('osupnil'), r2(T * p['nil']), 0, 0, 0, 0, sd))
+        rows['osupnongst'].append((nid('osupnongst'), r2(T * p['nongst']), 0, 0, 0, 0, sd))
+        rv_i = 0.0
         if no_rcm:
             rv_c = 0.0                                  # no isuprev row at all
         elif zero_rcm_row:
             rv_c = 0.0
             rows['isuprev'].append((nid('isuprev'), 0, 0, 0, 0, 0, sd))
+        elif p['gstin'] == '24AACCD0002H9AA':
+            # RAJKOT's RCM is INTER-state (import of services) -> nonzero iamt
+            # keeps SUM(iamt) != SUM(csamt) on isuprev/ISRC (audit #137)
+            rv = r2(T * p['rv']); rv_i = r2(rv * 2 * r); rv_c = 0.0
+            rows['isuprev'].append((nid('isuprev'), rv, rv_i, 0, 0, 0, sd))
         else:
-            rv = r2(Tm * p['rv']); rv_c = r2(rv * r)
+            spike = RCM_SPIKE.get((p['gstin'], rp), 1.0)
+            rv = r2(T * p['rv'] * spike); rv_c = r2(rv * r)
             rows['isuprev'].append((nid('isuprev'), rv, 0, rv_c, rv_c, 0, sd))
 
         # ITC — distinct magnitude per table (monthly-constant, NOT month-scaled)
@@ -1103,32 +1147,49 @@ def seed_gstr3b(cur) -> None:
         if zero_rcm_row:
             rows['avl'].append((nid('avl'), 'ISRC', 0, 0, 0, 0, itce))
         elif not no_rcm:
-            rows['avl'].append((nid('avl'), 'ISRC', 0, rv_c, rv_c, 0, itce))         # RCM credit (small)
+            rows['avl'].append((nid('avl'), 'ISRC', rv_i, rv_c, rv_c, 0, itce))      # RCM credit (small)
         inelg_c = r2(T * 0.001 * r)
         rows['inelg'].append((nid('inelg'), 'RUL', 0, inelg_c, inelg_c, 0, itce))    # tiny
         rows['inelg'].append((nid('inelg'), 'OTH', 0, 0, 0, 0, itce))
         rev_c = r2(T * 0.003 * r)
         rows['rev'].append((nid('rev'), 'RUL', 0, rev_c, rev_c, 0, itce))            # tiny, != inelg
         rows['rev'].append((nid('rev'), 'OTH', 0, 0, 0, 0, itce))
-        net_i = avl_i; net_c = r2(avl_c + rv_c - rev_c); net_s = net_c
+        net_i = r2(avl_i + rv_i); net_c = r2(avl_c + rv_c - rev_c); net_s = net_c
         rows['net'].append((nid('net'), net_i, net_c, net_s, 0, itce))
 
-        # tax payment
+        # tax payment. Payment MODES vary (audit round 3, #131): one return pays
+        # cash-only (no pd_itc row), one ITC-only (no pd_cash row) -- dropping
+        # either NOT-EXISTS leg of the "fully unpaid" question changes the answer.
         txp = nid('txp'); rows['txp'].append((txp, rid))
         if (idx, rp) != UNPAID:
             use_i = r2(min(net_i, o_i)); use_c = r2(min(net_c, o_c)); use_s = r2(min(net_s, o_s))
             liab = f"{97597400 + txp}"
-            rows['pditc'].append((nid('pditc'), liab, '30002',
-                                  use_i, 0, 0, 0, use_c, 0, use_s, 0, txp))
-            cash_i = r2(max(0, o_i - net_i)); cash_c = r2(max(0, o_c - net_c)); cash_s = r2(max(0, o_s - net_s))
-            rows['cash'].append((nid('cash'), liab, '30002',
-                                 cash_i, cash_c, cash_s, 0, 0, 0, 0, 0, 0, 0, 0, 0, txp))
+            if (idx, rp) != CASH_ONLY:
+                rows['pditc'].append((nid('pditc'), liab, '30002',
+                                      use_i, 0, 0, 0, use_c, 0, use_s, 0, txp))
+            if (idx, rp) != ITC_ONLY:
+                cash_i = r2(max(0, o_i - net_i)); cash_c = r2(max(0, o_c - net_c)); cash_s = r2(max(0, o_s - net_s))
+                if (idx, rp) == CASH_ONLY:
+                    cash_i, cash_c, cash_s = o_i, o_c, o_s      # full liability in cash
+                lfee_c = lfee_cs = 0.0
+                if (idx, rp) == LATE_FEE_ONLY:
+                    # late fee WITHOUT interest, on the tax line itself: an
+                    # interest-column -> late-fee-column swap must change the
+                    # "who paid interest" answer set (audit #130)
+                    lfee_c, lfee_cs = 100.00, 150.00
+                rows['cash'].append((nid('cash'), liab, '30002',
+                                     cash_i, cash_c, cash_s, 0, 0, 0, 0, 0, 0, lfee_c, 0, lfee_cs, txp))
             if (idx, rp) == INTEREST:
                 # cs_intrpd deliberately NONZERO on this Div-1 line: ranking by
                 # cs_intrpd must not tie back to the top-cash division (Div 2)
                 rows['cash'].append((nid('cash'), liab, '30003',
                                      0, 0, 0, 0, 500.00, 300.00, 300.00, 50.00,
                                      200.00, 100.00, 100.00, 0, txp))
+            if (idx, rp) == INTEREST_IGST_ONLY:
+                # a SECOND interest payer whose ONLY nonzero interest component
+                # is IGST: component swaps on the interest sum diverge (audit #130)
+                rows['cash'].append((nid('cash'), liab, '30003',
+                                     0, 0, 0, 0, 300.00, 0, 0, 0, 0, 0, 0, 0, txp))
 
     # insert in FK dependency order (parents before children)
     execute_values(cur, """INSERT INTO public.tbl_gst_rtn_r3b
@@ -1335,10 +1396,22 @@ def seed_gstr7(cur) -> None:
         if rid not in UNPAID_R7:
             frac = PAY_FRAC.get(rid, 1.0)
             tax_paid_rows.append((tp_id, rid, TS))
-            tax_cash_rows.append((tp_id, liab_id, debit_id, '30002', tran_date,
-                r2(igst_tx * frac),0,0,0,0, r2(cgst_tx * frac),0,0,100.00,0,
-                r2(sgst_tx * frac),0,0,100.00,0,
-                0,0,0,0,0, tp_id, TS))
+            if rid == 12:
+                # split payment: TWO cash debits for one settlement (sums equal
+                # the single-row equivalent). Also keeps COUNT(pd_by_cash) off
+                # the dealer-master cardinality (audit #113 table-swap).
+                half_i, half_c = r2(igst_tx * frac / 2), r2(cgst_tx * frac / 2)
+                tax_cash_rows.append((tp_id, liab_id, debit_id, '30002', tran_date,
+                    half_i,0,0,0,0, half_c,0,0,100.00,0, half_c,0,0,100.00,0,
+                    0,0,0,0,0, tp_id, TS))
+                tax_cash_rows.append((100 + tp_id, liab_id, f"{debit_id}B", '30002', tran_date,
+                    half_i,0,0,0,0, half_c,0,0,0,0, half_c,0,0,0,0,
+                    0,0,0,0,0, tp_id, TS))
+            else:
+                tax_cash_rows.append((tp_id, liab_id, debit_id, '30002', tran_date,
+                    r2(igst_tx * frac),0,0,0,0, r2(cgst_tx * frac),0,0,100.00,0,
+                    r2(sgst_tx * frac),0,0,100.00,0,
+                    0,0,0,0,0, tp_id, TS))
         tp_id += 1
 
     execute_values(cur, """
