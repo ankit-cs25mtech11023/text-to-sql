@@ -1,6 +1,6 @@
 """Layer-1 intrinsic retrieval eval (RAG_plan §3.5) — CPU only, no LLM, no tunnel.
 
-Scores the few-shot retriever against the 112 eval questions using their gold
+Scores the few-shot retriever against the 172 eval questions using their gold
 category/module as the relevance label (offline IR ground-truth — NOT a deployment
 signal; the runtime category rerank predicts from text). For each eval question it
 retrieves top-k pool few-shots and measures whether a same-pattern demo was fetched.

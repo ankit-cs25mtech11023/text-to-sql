@@ -58,10 +58,10 @@ _KEYWORDS = {
     "lower", "length", "abs", "nullif", "interval", "integer", "numeric", "varchar",
     "text", "date", "float", "boolean", "true", "false", "over", "partition",
     "row_number", "rank", "dense_rank", "concat", "replace", "split_part", "public",
-    "live_reports", "common",
+    "common",
 }
 
-_TABLE_RE = re.compile(r"\b(?:public|live_reports|common)\.[A-Za-z_]\w*")
+_TABLE_RE = re.compile(r"\b(?:public|common)\.[A-Za-z_]\w*")
 _CLAUSE_END_RE = re.compile(r"\b(GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|UNION|OFFSET)\b", re.I)
 
 

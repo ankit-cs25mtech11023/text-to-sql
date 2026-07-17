@@ -18,7 +18,7 @@ EXAMPLE_QUESTIONS = [
     "Which 3 HSN codes have the highest total assessable amount?",
     "How many GSTR-3B returns were filed?",
     "List the top 5 taxpayers by outward taxable value in FY 2025-26.",
-    "What is the total state income for financial year 2024-25?",
+    "How many taxpayers have had their GST registration cancelled?",
     "How many GSTR-7 returns have been filed?",
     "What is the total TDS deducted across all GSTR-7 returns?",
 ]

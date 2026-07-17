@@ -9,7 +9,7 @@ import sqlparse
 
 ALLOWED = {
     "public.tbl_ewb_parta_ewb", "public.tbl_gst_rtn_r7", "public.tbl_gst_rtn_r7_tds",
-    "live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned",
+    "public.tbl_gst_rtn_r3b",
     "common.mst_fy_years_t", "common.mst_3bd_months_t",
 }
 
@@ -101,10 +101,10 @@ class TestAllowList:
 
     def test_schema_qualified_join_pair(self):
         assert tables_of(
-            "SELECT * FROM live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned r "
-            "JOIN common.mst_fy_years_t f ON r.fy_flag = f.fy_flag "
-            "WHERE r.fy_flag = 8"
-        ) == {"live_reports.r3b_comphrehensive_list_mv_upd1_t_partitioned",
+            "SELECT * FROM public.tbl_gst_rtn_r3b r "
+            "JOIN common.mst_fy_years_t f ON r.fy = f.fy_id "
+            "WHERE f.fy_flag = 8"
+        ) == {"public.tbl_gst_rtn_r3b",
               "common.mst_fy_years_t"}
 
     def test_order_by_after_from_list_closed(self):

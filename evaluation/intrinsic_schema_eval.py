@@ -1,7 +1,7 @@
 """Layer-1 intrinsic SCHEMA-retrieval eval (RAG_plan §3.5) — CPU only, no LLM, no tunnel.
 
 The schema half of the intrinsic study (the few-shot half is `intrinsic_eval.py`).
-Scores `SchemaIndexer.retrieve_tables` against the 112 eval questions using the
+Scores `SchemaIndexer.retrieve_tables` against the 172 eval questions using the
 **gold table set parsed from each question's gold_sql** as IR ground-truth (offline,
 not a deployment signal). For each eval question it retrieves top-k table blocks and
 measures schema-linking recall.
