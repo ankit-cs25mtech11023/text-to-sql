@@ -914,18 +914,32 @@ stray trailing `-`.
 **Pipeline is schema-agnostic** — only `database/` + descriptions + gold/pool data change; `core/` is
 untouched.
 
-**Status (2026-07-17): adversarial re-seed (Option B+) DONE.** The open distinguishability decision was
-answered as **B+ extended** — re-seed to break collisions AND expand gold (126→~160–180) / pool /
-held-out AND review all existing items. Two audit-looped seed-edit rounds (spec: `reseed_design.md`,
-local) landed 9 fix packages (month factors, filing gap, per-profile section fractions, RCM spread,
-GSTR-7 varied/partial/unpaid payments, deductee mix, tdsa rework, GSTREG casual/never-filed dealers,
-cs_intrpd belt) + `verify()` grown to 15 invariant checks. Result: **24 → 11 colliding questions
-(8.7%), all 11 domain-invariant** (CGST=SGST equal-split, intra-state igst=0, always-true-filter —
-law-level equalities that collide on real data too; ids {3,8,9,41,47,58,65,68,75,96,106}). All 15
-seed-fixable targets plus 2 new-found ({85,97}) cleared; table-swap mutator 0/89. All 312 existing
-items re-verified executable/non-empty on the new seed. This is the unavoidable residual bound to
-document in the thesis. Remaining before step-6 v2 runs: review existing golds/pool/held-out, expand
-sets, final leakage + distinguishability audits on the expanded sets.
+**Status (2026-07-17): adversarial re-seed (Option B+) + eval-set expansion DONE.** The open
+distinguishability decision was answered as **B+ extended** — re-seed to break collisions AND expand
+gold/pool/held-out AND review all existing items. THREE audit-looped seed-edit rounds (spec:
+`reseed_design.md`, local) landed the 9 fix packages (month factors, filing gap, per-profile section
+fractions, RCM spread, GSTR-7 varied/partial/unpaid payments, deductee mix, tdsa rework, GSTREG
+casual/never-filed dealers, cs_intrpd belt) plus round-3 fixes for collisions surfaced by the new
+golds (monthly-constant nilexmp/nongst/isuprev, RCM spike + inter-state RCM, cash-only/ITC-only
+returns, interest/late-fee spread, dealers #10/#11 with EWB-only presence, split cash payment);
+`verify()` grown to 15 invariant checks. **Existing-item review:** all items re-verified
+executable/non-empty each round; boundary-tie check on every ranking gold found + fixed one
+pre-existing 3-way tie (#38, EWB bill 10 re-homed); order_matters flags and question-text literals
+verified consistent; descriptions accuracy pass post-F8 (rgtodt/iscasdl/isuprev wording). A metrics
+crash on duplicate-named prediction columns (SELECT a, a) was found by the audit and fixed
+(iloc-positional `_cols`, +1 regression test → 54).
+
+**Expansion:** gold 126→**172** (3B 18 / GSTR-7 12 / GSTREG+cross 14 / EWB 2 new), pool 154→**185**,
+held-out 32→**42**; thin categories thickened (having 1→8, subquery 2→9); new-seed features all
+covered (filing gap, busiest month, unpaid/partial payments, payable-vs-paid, amendments, dup-name
+deductees, casual/cancelled/never-filed cohorts, cross-module joins). All 399 exec-verified;
+**leakage audit PASS** (0 template-twins pool↔gold and held-out↔gold+pool). **Final
+distinguishability: 21/171 (12.3%) collide — ALL domain-invariant classes, 0 seed-fixable**: 11
+legacy (CGST=SGST equal-split, intra-igst=0, always-true-filter: {3,8,9,41,47,58,65,68,75,96,106}) +
+10 new-gold classes ({137,141,151,155} CGST=SGST swaps; {153} uniform-2%-TDS-rate; {128,142}
+proportional-tax argmax; {134} single-FY quarter shape; {159} SQL NULL-semantics; {163} id-column-sum
+mutator artifact). This is the documented residual bound. Remaining: step-6 v2 full runs (archive v1
+CSVs first; needs vLLM tunnel).
 
 ---
 
