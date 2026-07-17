@@ -960,6 +960,36 @@ full RAG) × 2 models (XiYanSQL-7B primary + Qwen-27B upper-bound) × runs=3 on 
 held-out 42 run-once → v2 2×2 tables + `stats.py` (McNemar/Wilson) → merge. v1 already archived; gated
 on the HPC vLLM tunnel + Qwen API.
 
+**Step-6 first pass + SCHEMA-RETRIEVAL FIX (2026-07-18, commit `e3f48b9`).** First v2 pass showed
+XiYan **full-RAG 87.4 < few-shot 90.3** (8 regressions) — schema retrieval net-negative for the 7B on
+the normalized schema. Root-caused via full fail-classification (all 22 full-RAG fails + 49
+schema-only fails, gold-tables-vs-retrieved-set join) into two mechanism classes:
+1. **Coverage class** — `common.*` masters (dealer/jurisdiction/FY/months) + FK **bridge** tables
+   (`sup_details`, `inward_sup`, `itc_elg`, `tx_pmt`) are semantically distant/bland so top-k never
+   ranks them (masters missing in 9 schema-only fails; `sup_details` in 13). Top-k also gets crowded
+   by the 5 identical-column section siblings. Without the bridge in the prompt the model hallucinates
+   the join key (#61 `j."range"`, held-out #2007 fabricated FK).
+2. **Grounding class** — M-Schema blocks carried descriptions but no data values; the 7B (not the
+   27B — same retrieval, Qwen schema-only trace got these right) drops categorical filters
+   (#140 `ty='NONGST'`), misroutes entities (#155 deductee name → dealer master), and falls into the
+   `amt_ded` trap (#153). XiYanSQL's own M-Schema training format includes per-column
+   `Examples: [...]` — our blocks omitted them (format deviation, not just missing info).
+**Fix (all schema-side, `e3f48b9`):** (a) 4 `common.*` masters added to `_CORE_TABLES` (+1.9K tok);
+(b) **FK-ancestor closure** at retrieve time (SchemaIndexer walks each selected table's FK chain up,
+injects missing parents — `get_fk_parents()` on SchemaExtractor, parents map persisted in the index
+pkl); (c) **per-column `Examples: [...]`** sampled live from PG (≤3 distinct, PK/FK cols skipped) in
+`get_table_blocks` — restores XiYan's native format AND makes value-bearing questions match their
+table at embed time; (d) **k 5→6** (rank-6 sibling-crowded leaves: #68-class; picked on intrinsic).
+**Intrinsic verification: full-cover 71.5→98.3%, recall 86.4→99.1%, decode-cover 54.5→100%**
+(k6+core-on; residual misses #131/#136 = deep-rank shared-fail leaves, documented). Live smoke through
+the tunnel: **10/11 regressions fixed** (incl. all 3 held-out); residual #139 = model shortcut the
+2-hop join with full info present. Prompt grows ~5.8K→~10K tok — still ~50% below static ~21K.
+Also fixed en route: Qwen few-shot 32K overflow (`qwen_max_tokens` 1500→500; 21 empty-SQL fails were
+overflow, not model errors) and the **shared-trace-path clobber** (`rag_traces.jsonl` is overwritten
+by every RAG invocation — session-6 diagnosis had read Qwen's trace as XiYan's; runner now archives
+traces per run). **Re-run matrix in flight** (all schema-retrieval configs both models + Qwen
+contaminated/missing cells, 11 runs); baseline + few-shot configs unaffected by the fix.
+
 ---
 
 ## Phase 9: Validity Hardening (review-driven, examiner-proofing)
