@@ -290,7 +290,7 @@
     }
   },
   "public.tbl_gst_rtn_r3b_sup_details_isuprev": {
-    "table_description": "Inward supplies under REVERSE CHARGE (Form 3.1(d)) — purchases where the buyer pays GST instead of the seller. One row per return. This is the RCM liability row inside sup_details; distinct from itc_avl ty='ISRC' (the same tax claimed BACK as ITC). Same columns as the outward section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
+    "table_description": "Inward supplies under REVERSE CHARGE (Form 3.1(d)) — purchases where the buyer pays GST instead of the seller. AT MOST one row per return: taxpayers with no RCM activity have NO row here (use LEFT JOIN / NOT EXISTS for 'no RCM' questions), and a row may exist with txval=0. This is the RCM liability row inside sup_details; distinct from itc_avl ty='ISRC' (the same tax claimed BACK as ITC). Same columns as the outward section tables. JOIN via idtbl_gst_rtn_r3b_sup_details to sup_details, then main.",
     "columns": {
       "idtbl_gst_rtn_r3b_sup_details_isuprev": "Primary key.",
       "txval": "Taxable value of inward supplies liable to reverse charge.",
@@ -358,8 +358,9 @@
       "stjd": "State jurisdiction code — JOIN KEY to common.mst_state_jurisdiction_code.state_jur_code for division/range/unit. Sample: 'GJ063'. Do NOT project this raw code when the officer wants a jurisdiction NAME.",
       "rgfmdt": "GST registration START date (DATE).",
       "apprvdt": "GST registration APPROVED date (DATE).",
-      "rgtodt": "GST registration END date (DATE). NULL for currently-registered taxpayers.",
-      "canc_dt": "GST CANCELLATION date (DATE). NULL = active/not cancelled; NOT NULL = cancelled. Use for 'active' (IS NULL) vs 'cancelled' (IS NOT NULL) taxpayers.",
+      "rgtodt": "GST registration validity END date (DATE). Set when the registration has an end: cancelled taxpayers AND casual/temporary registrations (iscasdl='Y' — validity-window end while still active). NOT a cancellation indicator — for cancelled-vs-active use canc_dt; rgtodt may differ from canc_dt on the same row.",
+      "canc_dt": "GST CANCELLATION date (DATE). NULL = active/not cancelled; NOT NULL = cancelled. Use for 'active' (IS NULL) vs 'cancelled' (IS NOT NULL) taxpayers — the ONLY cancellation column (not rgtodt).",
+      "iscasdl": "Casual dealer/taxpayer flag: 'Y' = casual (temporary, time-bound registration; rgtodt holds its validity END even while active), 'N' = regular.",
       "authstatus": "Registration status CODE. Sample: 'A' (active), 'SC', 'CBT'. Coded — decode master NOT loaded; read as-is, do NOT invent a join.",
       "regtypecd": "Registration type CODE. E.g. 'NT'/'TP'=Normal, 'CO'=Composition, 'ID'=ISD, 'NRTP'=Non-Resident, 'TD'=TDS, 'TC'=TCS, 'CA'=Casual, 'REGTM'=Temporary.",
       "regtype": "GST registration type (verbose). E.g. 'R'=Regular, 'O'=Composition, 'NRTP', 'TDS', 'TCS', 'SUO MOTO'.",

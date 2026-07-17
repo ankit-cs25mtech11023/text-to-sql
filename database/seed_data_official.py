@@ -16,6 +16,19 @@ Adversarial seed rules (distinguishability audit fix list, results/README.md W1)
  - distinct argmax per measure (top-by-assval != top-by-igstval != top-by-InvVal;
    deductor top-by-amt_ded != top-by-TDS)
  - distinct-count asymmetry (5 consignor gstins vs 6 consignee names)
+
+Round 2 (Option B re-seed, reseed_design.md — breaks the 15 seed-fixable
+distinguishability collisions from the v2 audit):
+ - per-month activity factors, SUM-preserving per FY (month-scoped aggregates
+   decouple; FY totals/rankings unchanged) + one seasonal taxpayer (RAJKOT)
+ - per-profile section fractions (zero/nil/nongst/rv orderings decoupled from
+   turnover order -> section table-swaps break on ranking golds)
+ - RCM-free returns (absent isuprev rows AND a zero-txval row variant)
+ - filing gap (SURAT skips 062025) + a registered dealer with zero returns
+ - GSTR-7: varied per-return payables, partial + unpaid payments,
+   D3 top-by-#deductee-gstins vs D2 top-by-#names vs D1 top-by-TDS,
+   amendments argmax != TDS argmax (no D1 amendment)
+ - GSTREG: casual dealer with rgtodt set / canc_dt NULL; RAJKOT canc_dt<>rgtodt
 CGST=SGST equal split KEPT (domain law, class-1 equivalence — collides on real data too).
 
 Run:  python database/seed_data_official.py
@@ -626,50 +639,103 @@ DDL_GSTR7 = [
 # Adversarial levers baked in: distinct base turnover magnitudes, distinct
 # igst_frac (top-by-IGST != top-by-turnover), distinct pur_frac (top-by-ITC a
 # THIRD taxpayer), 2 cancelled taxpayers (canc_dt IS NOT NULL), asymmetric
-# division membership (Div1=3, Div2=3, Div3=2).
+# division membership (Div1=4 incl. never-filer, Div2=3, Div3=2).
+# Re-seed round 2 (distinguishability fix, reseed_design.md): per-profile
+# SECTION FRACTIONS (zero/nil/nongst/rv) whose orderings are decoupled from the
+# base-turnover ordering -> section-table swaps break on ranking/argmax golds;
+# rv=0 marks the always-RCM-free taxpayer.
 
 R3B_PROFILES = [
     dict(gstin='24AAAAR0001A9AA', trdnm='SANGH TEXTILES LTD',
          lgnm='SANGH TEXTILES LIMITED AHMEDABAD', base=2_210_664, rate=0.09,
-         igst_frac=0.00, pur_frac=0.60, auth='STATE', stjd='GJ011', ctjd='VC0101',
+         igst_frac=0.00, pur_frac=0.50, auth='STATE', stjd='GJ011', ctjd='VC0101',
          division='Division 1 (ABD)', range='Range 1 (ABD)', unit='Ghatak 1 (ABD)',
-         ntcrbs='Manufacturer', cobz='PVT', risk='LOW_RISK(1.00)', cancelled=False),
+         ntcrbs='Manufacturer', cobz='PVT', risk='LOW_RISK(1.00)', cancelled=False,
+         zero=0.10, nil=0.12, nongst=0.015, rv=0.008),
     dict(gstin='24AAAAR0002B9AA', trdnm='PATEL CHEMICALS LTD',
          lgnm='PATEL CHEMICALS LIMITED', base=843_521, rate=0.09,
          igst_frac=0.30, pur_frac=0.55, auth='STATE', stjd='GJ012', ctjd='VC0102',
          division='Division 1 (ABD)', range='Range 1 (ABD)', unit='Ghatak 2 (ABD)',
-         ntcrbs='Manufacturer', cobz='PVT', risk='MEDIUM_RISK(5.00)', cancelled=False),
+         ntcrbs='Manufacturer', cobz='PVT', risk='MEDIUM_RISK(5.00)', cancelled=False,
+         zero=0.28, nil=0.02, nongst=0.05, rv=0.030),
     dict(gstin='24AAAAR0003C9AA', trdnm='GUJARAT PHARMA CORP',
          lgnm='GUJARAT PHARMACEUTICAL CORPORATION', base=1_517_800, rate=0.06,
          igst_frac=0.10, pur_frac=0.95, auth='CENTER', stjd='GJ023', ctjd='VC0203',
          division='Division 1 (ABD)', range='Range 2 (ABD)', unit='Ghatak 3 (ABD)',
-         ntcrbs='Manufacturer', cobz='PAR', risk='LOW_RISK(1.00)', cancelled=False),
+         ntcrbs='Manufacturer', cobz='PAR', risk='LOW_RISK(1.00)', cancelled=False,
+         zero=0.22, nil=0.04, nongst=0.01, rv=0.015),
     dict(gstin='24AABCE0001D9AA', trdnm='SURAT TEXTILES PVT LTD',
          lgnm='SURAT TEXTILES PRIVATE LIMITED', base=1_234_567, rate=0.09,
          igst_frac=0.00, pur_frac=0.50, auth='STATE', stjd='GJ034', ctjd='VC0304',
          division='Division 2 (ABD)', range='Range 3 (ABD)', unit='Ghatak 4 (ABD)',
-         ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=False),
+         ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=False,
+         zero=0.12, nil=0.025, nongst=0.04, rv=0.025,
+         casual=True, rgtodt=date(2026, 3, 31)),
     dict(gstin='24AABCE0002E9AA', trdnm='AHMEDABAD STEEL WORKS',
          lgnm='AHMEDABAD STEEL WORKS LTD', base=3_061_234, rate=0.09,
          igst_frac=0.50, pur_frac=0.50, auth='STATE', stjd='GJ035', ctjd='VC0305',
          division='Division 2 (ABD)', range='Range 3 (ABD)', unit='Ghatak 5 (ABD)',
-         ntcrbs='Manufacturer', cobz='PVT', risk='MEDIUM_RISK(5.00)', cancelled=False),
+         ntcrbs='Manufacturer', cobz='PVT', risk='MEDIUM_RISK(5.00)', cancelled=False,
+         zero=0.08, nil=0.03, nongst=0.02, rv=0.006),
     dict(gstin='24AABCE0003F9AA', trdnm='GUJARAT CEMENT LTD',
          lgnm='GUJARAT CEMENT LIMITED', base=2_498_765, rate=0.09,
          igst_frac=0.95, pur_frac=0.45, auth='CENTER', stjd='GJ046', ctjd='VC0406',
          division='Division 2 (ABD)', range='Range 4 (ABD)', unit='Ghatak 6 (ABD)',
-         ntcrbs='Manufacturer', cobz='PVT', risk='LOW_RISK(1.00)', cancelled=False),
+         ntcrbs='Manufacturer', cobz='PVT', risk='LOW_RISK(1.00)', cancelled=False,
+         zero=0.30, nil=0.05, nongst=0.012, rv=0.012),
     dict(gstin='24AACCD0001G9AA', trdnm='BARODA FOODS LTD',
          lgnm='BARODA FOODS LIMITED', base=511_111, rate=0.025,
          igst_frac=0.00, pur_frac=0.70, auth='STATE', stjd='GJ057', ctjd='VC0507',
          division='Division 3 (ABD)', range='Range 5 (ABD)', unit='Ghatak 7 (ABD)',
-         ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=True),
+         ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=True,
+         zero=0.15, nil=0.11, nongst=0.06, rv=0.0,
+         canc_dt=date(2025, 3, 31), rgtodt=date(2025, 3, 31), canc_mnth='032025'),
     dict(gstin='24AACCD0002H9AA', trdnm='RAJKOT AUTO PARTS',
          lgnm='RAJKOT AUTO PARTS PVT LTD', base=1_789_999, rate=0.14,
          igst_frac=0.40, pur_frac=1.10, auth='STATE', stjd='GJ058', ctjd='VC0508',
          division='Division 3 (ABD)', range='Range 5 (ABD)', unit='Ghatak 8 (ABD)',
-         ntcrbs='Service Provider', cobz='PAR', risk='MEDIUM_RISK(5.00)', cancelled=True),
+         ntcrbs='Service Provider', cobz='PAR', risk='MEDIUM_RISK(5.00)', cancelled=True,
+         zero=0.18, nil=0.06, nongst=0.03, rv=0.020,
+         canc_dt=date(2024, 12, 15), rgtodt=date(2024, 11, 30), canc_mnth='122024'),
 ]
+
+# Registered dealer with ZERO filed returns (any module) -> COUNT(dealers) can
+# never collide with COUNT(DISTINCT filers). Div1 membership keeps division
+# rollups asymmetric (4/3/2).
+NONFILER_DEALERS = [
+    dict(gstin='24AADDF0001Z9AA', trdnm='MEHSANA AGRO TRADERS',
+         lgnm='MEHSANA AGRO TRADERS PROPRIETORSHIP', auth='STATE',
+         stjd='GJ013', ctjd='VC0103',
+         division='Division 1 (ABD)', range='Range 1 (ABD)', unit='Ghatak 9 (MSA)',
+         ntcrbs='Trader', cobz='PRO', risk='NA', cancelled=False,
+         rgfmdt=date(2025, 6, 1), apprvdt=date(2025, 6, 4), apprv_mnth='062025'),
+]
+
+# Per-month activity factors (multiply every supply-section value; ITC side
+# stays monthly-constant). SUM per FY is EXACTLY the month count (6.00 / 3.00)
+# -> all FY-total golds, rankings, and argmaxes are unchanged; only month-
+# scoped aggregates decouple (audit themes #63/#77). RAJKOT gets a seasonal
+# override (Jun+Sep light) so quarter-end subsets rank differently from FY.
+R3B_MONTH_FACTORS = {
+    '042024': 0.85, '052024': 1.05, '062024': 1.20,
+    '072024': 0.90, '082024': 1.25, '092024': 0.75,
+    '042025': 0.80, '052025': 1.10, '062025': 1.10,
+}
+R3B_SEASONAL_FACTORS = {
+    '24AACCD0002H9AA': {                      # RAJKOT AUTO PARTS, FY8 override
+        '042024': 1.60, '052024': 1.40, '062024': 0.50,
+        '072024': 1.30, '082024': 0.80, '092024': 0.40,
+    },
+}
+
+# Filing gaps: (gstin, ret_period) pairs NOT filed (non-filer months exist in
+# reality; breaks uniform-count coincidences #53/#59).
+R3B_SKIPPED_FILINGS = {('24AABCE0001D9AA', '062025')}          # SURAT skips Jun-2025
+
+# RCM-free returns (audit theme #66): BARODA always (rv=0, row absent) +
+# SANGH's FY9 returns (row absent) + PHARMA Apr/May-2024 (row present, txval 0).
+RCM_ABSENT = {('24AAAAR0001A9AA', rp) for rp in ('042025', '052025', '062025')}
+RCM_ZERO_ROW = {('24AAAAR0003C9AA', '042024'), ('24AAAAR0003C9AA', '052024')}
 
 # Return period (MMYYYY) -> (mnth_id, fy_flag, month_name, mnth_cd, quarter, quarter_all)
 # fy_flag 8 = FY2024-25, 9 = FY2025-26. `quarter` populated only on closing month.
@@ -729,9 +795,11 @@ def seed_masters(cur) -> None:
 # ─── GSTREG: jurisdiction master + dealer master ─────────────────────────────
 
 def seed_gstreg(cur) -> None:
-    # jurisdiction decode (stjd -> division/range/unit); 1 row per profile's stjd
+    all_dealers = R3B_PROFILES + NONFILER_DEALERS
+
+    # jurisdiction decode (stjd -> division/range/unit); 1 row per dealer's stjd
     jur_rows = []
-    for i, p in enumerate(R3B_PROFILES, start=1):
+    for i, p in enumerate(all_dealers, start=1):
         jur_rows.append((
             i, p['stjd'], p['division'], p['range'], p['unit'], 'A',
             date(2023, 9, 23), '', p['division'], p['range'], p['unit'],
@@ -743,18 +811,23 @@ def seed_gstreg(cur) -> None:
            db_remarks,h3,h2,h1,last_updated_dt)
         VALUES %s""", jur_rows)
 
-    # dealer master (1 row per GSTIN)
+    # dealer master (1 row per GSTIN). rgtodt is NOT a cancellation proxy:
+    # the casual dealer (SURAT) carries a registration-validity end date with
+    # canc_dt NULL, and RAJKOT's rgtodt != canc_dt (audit themes #115/#124).
     dealer_rows = []
-    for p in R3B_PROFILES:
+    for p in all_dealers:
         pan = p['gstin'][2:12]
         cx = p['cancelled']
         dealer_rows.append((
             p['gstin'], pan, p['lgnm'], p['trdnm'], p['gstin'][:2], p['auth'],
-            p['stjd'], p['ctjd'], date(2017, 7, 1), date(2017, 7, 5), '072017',
-            date(2025, 3, 31) if cx else None,          # rgtodt
-            date(2025, 3, 31) if cx else None,          # canc_dt
-            '032025' if cx else None,                   # canc_mnth
-            'SC' if cx else 'A', 'S2S', 'Y', 'TP', 'R', 'N', p['cobz'], 'OWN',
+            p['stjd'], p['ctjd'],
+            p.get('rgfmdt', date(2017, 7, 1)), p.get('apprvdt', date(2017, 7, 5)),
+            p.get('apprv_mnth', '072017'),
+            p.get('rgtodt'),                            # rgtodt
+            p.get('canc_dt'),                           # canc_dt
+            p.get('canc_mnth'),                         # canc_mnth
+            'SC' if cx else 'A', 'S2S', 'Y', 'TP', 'R',
+            'Y' if p.get('casual') else 'N', p['cobz'], 'OWN',
             p['ntcrbs'], '', f"{p['unit']} Industrial Area, Gujarat",
             f"{p['trdnm'].split()[0].lower()}@example.com", '9988' + p['gstin'][2:8],
             date(2023, 1, 1), 'R',
@@ -981,6 +1054,8 @@ def seed_gstr3b(cur) -> None:
 
     plan = [(i, p, rp) for i, p in enumerate(R3B_PROFILES) for rp in R3B_FY8_PERIODS]
     plan += [(i, p, rp) for i, p in enumerate(R3B_PROFILES[:5]) for rp in R3B_FY9_PERIODS]
+    plan = [(i, p, rp) for i, p, rp in plan
+            if (p['gstin'], rp) not in R3B_SKIPPED_FILINGS]
 
     for idx, p, rp in plan:
         rid = nid('main')
@@ -990,30 +1065,43 @@ def seed_gstr3b(cur) -> None:
             f"{yyyy}-{mm + 1:02d}-20", str(20 + rid % 30)))
 
         T, r, f, pf = p['base'], p['rate'], p['igst_frac'], p['pur_frac']
-        intra, inter = r2(T * (1 - f)), r2(T * f)
+        fm = R3B_SEASONAL_FACTORS.get(p['gstin'], {}).get(rp, R3B_MONTH_FACTORS[rp])
+        Tm = T * fm                                     # month-scaled turnover
+        intra, inter = r2(Tm * (1 - f)), r2(Tm * f)
+        no_rcm = p['rv'] == 0 or (p['gstin'], rp) in RCM_ABSENT
+        zero_rcm_row = (p['gstin'], rp) in RCM_ZERO_ROW
 
         # inward supplies (ty GST / NONGST)
         iw = nid('inw'); rows['inw'].append((iw, rid))
-        rows['isupd'].append((nid('isupd'), 'GST',    r2(T * 0.04), r2(T * 0.08), iw))
-        rows['isupd'].append((nid('isupd'), 'NONGST', r2(T * 0.01), r2(T * 0.02), iw))
+        rows['isupd'].append((nid('isupd'), 'GST',    r2(Tm * 0.04), r2(Tm * 0.08), iw))
+        rows['isupd'].append((nid('isupd'), 'NONGST', r2(Tm * 0.01), r2(Tm * 0.02), iw))
 
-        # supply details — distinct magnitude per section
+        # supply details — per-profile section fractions, month-scaled
         sd = nid('sd'); rows['sd'].append((sd, rid))
         o_c = r2(intra * r); o_s = o_c; o_i = r2(inter * 2 * r)
-        rows['osupdet'].append((nid('osupdet'), T, o_i, o_c, o_s, 0, sd))            # ~1.000 T
-        z = r2(T * 0.20)
-        rows['osupzero'].append((nid('osupzero'), z, r2(z * 0.02), 0, 0, 0, sd))     # ~0.200 T
-        rows['osupnil'].append((nid('osupnil'), r2(T * 0.05), 0, 0, 0, 0, sd))       # ~0.050 T
-        rows['osupnongst'].append((nid('osupnongst'), r2(T * 0.03), 0, 0, 0, 0, sd)) # ~0.030 T
-        rv = r2(T * 0.015); rv_c = r2(rv * r)
-        rows['isuprev'].append((nid('isuprev'), rv, 0, rv_c, rv_c, 0, sd))           # ~0.015 T
+        rows['osupdet'].append((nid('osupdet'), r2(Tm), o_i, o_c, o_s, 0, sd))
+        z = r2(Tm * p['zero'])
+        rows['osupzero'].append((nid('osupzero'), z, r2(z * 0.02), 0, 0, 0, sd))
+        rows['osupnil'].append((nid('osupnil'), r2(Tm * p['nil']), 0, 0, 0, 0, sd))
+        rows['osupnongst'].append((nid('osupnongst'), r2(Tm * p['nongst']), 0, 0, 0, 0, sd))
+        if no_rcm:
+            rv_c = 0.0                                  # no isuprev row at all
+        elif zero_rcm_row:
+            rv_c = 0.0
+            rows['isuprev'].append((nid('isuprev'), 0, 0, 0, 0, 0, sd))
+        else:
+            rv = r2(Tm * p['rv']); rv_c = r2(rv * r)
+            rows['isuprev'].append((nid('isuprev'), rv, 0, rv_c, rv_c, 0, sd))
 
-        # ITC — distinct magnitude per table
+        # ITC — distinct magnitude per table (monthly-constant, NOT month-scaled)
         itce = nid('itce'); rows['itce'].append((itce, rid))
         pur = r2(T * pf)
         avl_c = r2(pur * r * (1 - f)); avl_s = avl_c; avl_i = r2(pur * f * 2 * r)
         rows['avl'].append((nid('avl'), 'OTH',  avl_i, avl_c, avl_s, 0, itce))       # largest ITC
-        rows['avl'].append((nid('avl'), 'ISRC', 0, rv_c, rv_c, 0, itce))             # RCM credit (small)
+        if zero_rcm_row:
+            rows['avl'].append((nid('avl'), 'ISRC', 0, 0, 0, 0, itce))
+        elif not no_rcm:
+            rows['avl'].append((nid('avl'), 'ISRC', 0, rv_c, rv_c, 0, itce))         # RCM credit (small)
         inelg_c = r2(T * 0.001 * r)
         rows['inelg'].append((nid('inelg'), 'RUL', 0, inelg_c, inelg_c, 0, itce))    # tiny
         rows['inelg'].append((nid('inelg'), 'OTH', 0, 0, 0, 0, itce))
@@ -1034,8 +1122,10 @@ def seed_gstr3b(cur) -> None:
             rows['cash'].append((nid('cash'), liab, '30002',
                                  cash_i, cash_c, cash_s, 0, 0, 0, 0, 0, 0, 0, 0, 0, txp))
             if (idx, rp) == INTEREST:
+                # cs_intrpd deliberately NONZERO on this Div-1 line: ranking by
+                # cs_intrpd must not tie back to the top-cash division (Div 2)
                 rows['cash'].append((nid('cash'), liab, '30003',
-                                     0, 0, 0, 0, 500.00, 300.00, 300.00, 0,
+                                     0, 0, 0, 0, 500.00, 300.00, 300.00, 50.00,
                                      200.00, 100.00, 100.00, 0, txp))
 
     # insert in FK dependency order (parents before children)
@@ -1140,25 +1230,41 @@ def seed_gstr7(cur) -> None:
             tds_inv_id += 1
         tds_id += 1
 
+    # Argmax design (reseed_design.md F6): D1 = top by total TDS (197.2k/period
+    # vs D3 190k); D3 = top by #distinct deductee GSTINs (5, incl. 2 dup-name
+    # extras -> only 3 distinct names); D2 = top by #distinct deductee NAMES (4).
+    # A camt->iamt swap (2*iamt+samt) flips the argmax to inter-heavy D3.
+    GJ_DUP = '24AAAAM0003J1ZT'     # different GSTIN, SAME name as D['GJ'] row in D3
+    PB_DUP = '27AADFP0001Q1ZC'     # different GSTIN, SAME name as D['PB'] row in D3
+    NEW2   = '06AAHRC0001R1ZF'     # D2's 4th deductee, unique name
+    AC_DUP = '24AAACA0001B1ZQ'     # D4's 3rd deductee, dup name -> 11 gstins vs 10 names
+
     for fp in periods:                                   # Deductor 1 -> top total TDS
         fk = r7_map[('03AABCP9999J2DM', fp)]
         tds_entry(fk, D['WB'], 'WB Contractors Ltd', 7_669_081, True)
         tds_entry(fk, D['PB'], 'Punjab IT Services', 2_191_166, False)
-    for i, fp in enumerate(periods):                     # Deductor 2 (+ solo deductee once)
+    for i, fp in enumerate(periods):                     # Deductor 2 -> most distinct NAMES (4)
         fk = r7_map[('06AABCE0001M1ZP', fp)]
         tds_entry(fk, D['MH'], 'MH Engineering Works',  5_000_000, True)
         tds_entry(fk, D['HR'], 'HR Civil Contractors',  1_000_000, False)
+        tds_entry(fk, NEW2,    'Haryana Road Corp',       400_000, False)
         if i == 0:
             tds_entry(fk, SOLO, 'Solo Vendor Pvt Ltd',    333_333, False)
-    for fp in periods:                                   # Deductor 3 -> most deductees (3)
+    for fp in periods:                                   # Deductor 3 -> most deductee GSTINs (5)
         fk = r7_map[('27AABCP0001K1ZM', fp)]
-        tds_entry(fk, D['GJ'], 'GJ Supply Corp',       3_500_000, True)
-        tds_entry(fk, D['PB'], 'Punjab Suppliers',       800_000, True)
+        tds_entry(fk, D['GJ'], 'GJ Supply Corp',       1_500_000, True)
+        tds_entry(fk, GJ_DUP,  'GJ Supply Corp',       4_500_000, True)
+        tds_entry(fk, D['PB'], 'Punjab Suppliers',     2_400_000, True)
         tds_entry(fk, D['MH'], 'MH Local Vendor',        500_000, False)
+        tds_entry(fk, PB_DUP,  'Punjab Suppliers',       200_000, False)
     for fp in periods:                                   # Deductor 4 (duplicate NAME, diff GSTIN)
+        # D['GJ'] is the top DEDUCTEE by TDS via this camt-heavy intra line
+        # (+ its small D3 inter line) -> a camt/samt column-swap flips the
+        # deductee argmax back to inter-only WB (audit #97)
         fk = r7_map[('24AAAAM0001J1ZP', fp)]
-        tds_entry(fk, D['GJ'],  'Ahmedabad Constructions', 4_200_000, False)
-        tds_entry(fk, MH_DUP,   'MH Engineering Works',     2_800_000, True)
+        tds_entry(fk, D['GJ'],  'Ahmedabad Constructions', 6_800_000, False)
+        tds_entry(fk, MH_DUP,   'MH Engineering Works',     2_500_000, True)
+        tds_entry(fk, AC_DUP,   'Ahmedabad Constructions',    250_000, False)
 
     execute_values(cur, """
         INSERT INTO public.tbl_gst_rtn_r7_tds (
@@ -1171,25 +1277,29 @@ def seed_gstr7(cur) -> None:
             flag,chksum,idtbl_gst_rtn_r7_tds,inserted_date
         ) VALUES %s""", tds_inv_rows)
 
-    # tdsa = 3 amendments (D1 oct, D2 nov, D3 nov)
+    # tdsa = 3 amendments — deliberately NO amendment for D1 (top-TDS deductor):
+    # ranking deductors via the tdsa table must NOT reproduce the tds argmax
+    # (top by amendment TDS = D2, 110k), and the tdsa top DEDUCTEE must not
+    # reproduce the tds top deductee D['GJ'] (top = D['MH']). D2 nov, D3 nov,
+    # D4 oct.
     tdsa_rows = [
-        (1, D['WB'],'102025',7_669_081, D['WB'],7_500_000,150_000.00,0,0,
-         None,'C','Y', r7_map[('03AABCP9999J2DM','112025')], TS,
-         'WB Contractors Ltd',None,None,None,'WB Contractors Ltd',None,None,None),
-        (2, D['MH'],'112025',5_000_000, D['MH'],4_800_000, 96_000.00,0,0,
+        (1, D['MH'],'112025',5_000_000, D['MH'],5_500_000,110_000.00,0,0,
          None,'C','Y', r7_map[('06AABCE0001M1ZP','122025')], TS,
          'MH Engineering Works',None,None,None,'MH Engineering Works',None,None,None),
-        (3, D['GJ'],'112025',3_500_000, D['GJ'],3_600_000,     0,36_000.00,36_000.00,
+        (2, D['GJ'],'112025',1_500_000, D['GJ'],1_550_000, 31_000.00,0,0,
          None,'C','Y', r7_map[('27AABCP0001K1ZM','122025')], TS,
          'GJ Supply Corp',None,None,None,'GJ Supply Corp',None,None,None),
+        (3, MH_DUP,'102025',2_500_000, MH_DUP,2_450_000, 49_000.00,0,0,
+         None,'C','Y', r7_map[('24AAAAM0001J1ZP','112025')], TS,
+         'MH Engineering Works',None,None,None,'MH Engineering Works',None,None,None),
     ]
     tdsa_inv_rows = [
-        (1, D['WB'],'102025',486_780, D['WB'],486_780,0,4_867.80,4_867.80,
-         None,'C','Y','INV/001/01','01-10-2025','496516','INV/001/01','01-10-2025','496516',1,TS),
-        (2, None,'112025',569_620, D['MH'],569_620,0,0,0,
-         None,'C','Y','INV/005/01','02-11-2025','581012','INV/005/01','02-11-2025','581012',2,TS),
-        (3, D['GJ'],'112025',420_000, D['GJ'],420_000,0,4_200.00,4_200.00,
-         None,'C','Y','INV/019/01','03-11-2025','428400','INV/019/01','03-11-2025','428400',3,TS),
+        (1, None,'112025',569_620, D['MH'],605_000,12_100.00,0,0,
+         None,'C','Y','INV/005/01','02-11-2025','581012','INV/005/01','02-11-2025','617100',1,TS),
+        (2, D['GJ'],'112025',165_000, D['GJ'],170_500, 3_410.00,0,0,
+         None,'C','Y','INV/019/01','03-11-2025','168300','INV/019/01','03-11-2025','173910',2,TS),
+        (3, MH_DUP,'102025',275_000, MH_DUP,269_500, 5_390.00,0,0,
+         None,'C','Y','INV/031/01','01-10-2025','280500','INV/031/01','01-10-2025','274890',3,TS),
     ]
     execute_values(cur, """
         INSERT INTO public.tbl_gst_rtn_r7_tdsa (
@@ -1205,19 +1315,28 @@ def seed_gstr7(cur) -> None:
             oinum,oidt,oival,inum,idt,ival,idtbl_gst_rtn_r7_tdsa,inserted_date
         ) VALUES %s""", tdsa_inv_rows)
 
-    # tax payable + paid (one per return)
+    # tax payable + paid — payable VARIES per return and paid != payable in
+    # aggregate (reseed_design.md F5): rid 5 pays 60%, rid 12 pays 85%, rid 7
+    # entirely unpaid (no tax_paid / pd_by_cash rows). cgst = sgst kept (law);
+    # igst != cgst/sgst on every row.
+    PAY_FRAC = {5: 0.60, 12: 0.85}
+    UNPAID_R7 = {7}                                      # D3, 102025
     tax_pay_rows = []; tax_paid_rows = []; tax_cash_rows = []; tp_id = 1
     for r7_row in r7_rows:
         rid = r7_row[0]; tran_date = r7_row[3]
-        igst_tx, cgst_tx, sgst_tx = 50_000.00, 20_000.00, 20_000.00
+        igst_tx = 30_000.00 + 5_000 * ((rid * 7) % 12)
+        cgst_tx = sgst_tx = 10_000.00 + 2_500 * ((rid * 5) % 12)
         liab_id = f"2274{rid:08d}"; debit_id = f"DC032025{rid:08d}"
         tax_pay_rows.append((tp_id, liab_id, '30002', tran_date,
             igst_tx,0,0,0,0, cgst_tx,0,0,100.00,0, sgst_tx,0,0,100.00,0,
             0,0,0,0,0, rid, TS))
-        tax_paid_rows.append((tp_id, rid, TS))
-        tax_cash_rows.append((tp_id, liab_id, debit_id, '30002', tran_date,
-            igst_tx,0,0,0,0, cgst_tx,0,0,100.00,0, sgst_tx,0,0,100.00,0,
-            0,0,0,0,0, tp_id, TS))
+        if rid not in UNPAID_R7:
+            frac = PAY_FRAC.get(rid, 1.0)
+            tax_paid_rows.append((tp_id, rid, TS))
+            tax_cash_rows.append((tp_id, liab_id, debit_id, '30002', tran_date,
+                r2(igst_tx * frac),0,0,0,0, r2(cgst_tx * frac),0,0,100.00,0,
+                r2(sgst_tx * frac),0,0,100.00,0,
+                0,0,0,0,0, tp_id, TS))
         tp_id += 1
 
     execute_values(cur, """
@@ -1333,6 +1452,130 @@ def verify(cur) -> None:
         LEFT JOIN common.mst_fy_years_t   y ON y.flag_fy = m.fy_flag
         WHERE y.flag_fy IS NULL""")
     problems += [] if unresolved == 0 else [f"unresolved FY decode rows: {unresolved}"]
+
+    # ── re-seed round 2 checks (reseed_design.md) ────────────────────────────
+
+    # 8) month factors active: per-month osupdet sums must NOT be uniform
+    n_month_sums = scalar("""
+        SELECT COUNT(DISTINCT s) FROM (
+          SELECT r.ret_period, SUM(o.txval) AS s
+          FROM public.tbl_gst_rtn_r3b r
+          JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+          JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o
+            ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+          GROUP BY r.ret_period) q""")
+    print(f"  distinct per-month osupdet sums: {n_month_sums}")
+    problems += [] if n_month_sums >= 6 else ["per-month osupdet sums too uniform"]
+
+    # 9) RCM spread: returns w/o isuprev row, >=1 zero-txval row, RCM<returns
+    total_rtn = scalar("SELECT COUNT(*) FROM public.tbl_gst_rtn_r3b")
+    no_rcm_rtn = scalar("""
+        SELECT COUNT(*) FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_sup_details_isuprev iv
+                          WHERE iv.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details)""")
+    zero_rcm = scalar("SELECT COUNT(*) FROM public.tbl_gst_rtn_r3b_sup_details_isuprev WHERE txval = 0")
+    pos_rcm = scalar("SELECT COUNT(*) FROM public.tbl_gst_rtn_r3b_sup_details_isuprev WHERE txval > 0")
+    print(f"  RCM: {no_rcm_rtn} returns w/o isuprev row, {zero_rcm} zero rows, {pos_rcm} positive of {total_rtn}")
+    problems += [] if no_rcm_rtn >= 1 else ["no return without isuprev row"]
+    problems += [] if zero_rcm >= 1 else ["no zero-txval isuprev row"]
+    problems += [] if pos_rcm < total_rtn else ["every return has RCM > 0"]
+
+    # 10) registered dealers > distinct 3B filers (never-filed dealer exists)
+    dealers = scalar("SELECT COUNT(*) FROM common.t_all_delers_api_v_t")
+    filers = scalar("SELECT COUNT(DISTINCT gstin) FROM public.tbl_gst_rtn_r3b")
+    print(f"  dealers={dealers} vs distinct 3B filers={filers}")
+    problems += [] if dealers > filers else ["dealer count == filer count (collision)"]
+
+    # 11) rgtodt is not a cancellation proxy
+    n_rgtodt = scalar("SELECT COUNT(*) FROM common.t_all_delers_api_v_t WHERE rgtodt IS NOT NULL")
+    n_canc = scalar("SELECT COUNT(*) FROM common.t_all_delers_api_v_t WHERE canc_dt IS NOT NULL")
+    n_diff = scalar("""SELECT COUNT(*) FROM common.t_all_delers_api_v_t
+                       WHERE canc_dt IS NOT NULL AND rgtodt IS NOT NULL AND canc_dt <> rgtodt""")
+    print(f"  rgtodt set on {n_rgtodt}, canc_dt on {n_canc}, rows with canc_dt<>rgtodt: {n_diff}")
+    problems += [] if n_rgtodt > n_canc else ["rgtodt-set == canc_dt-set (collision)"]
+    problems += [] if n_diff >= 1 else ["no row with canc_dt <> rgtodt"]
+
+    # 12) GSTR-7 payable > paid per component; >=1 unpaid; >=2 partial
+    for comp in ('igst_tx', 'cgst_tx', 'sgst_tx'):
+        pay = scalar(f"SELECT COALESCE(SUM({comp}),0) FROM public.tbl_gst_rtn_r7_tax_pay")
+        paid = scalar(f"SELECT COALESCE(SUM({comp}),0) FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash")
+        problems += [] if pay > paid else [f"R7 {comp}: payable {pay} !> paid {paid}"]
+    r7_unpaid = scalar("""
+        SELECT COUNT(*) FROM public.tbl_gst_rtn_r7 r
+        WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p
+                          WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7)""")
+    print(f"  R7 unpaid returns: {r7_unpaid}")
+    problems += [] if r7_unpaid >= 1 else ["no unpaid GSTR-7 return"]
+
+    # 13) GSTR-7 argmax separation (TDS / #gstins / #names / amendments)
+    top_tds = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r7 r
+        JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+        GROUP BY r.gstin ORDER BY SUM(t.iamt + t.camt + t.samt) DESC LIMIT 1""")
+    top_ngstin = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r7 r
+        JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+        GROUP BY r.gstin ORDER BY COUNT(DISTINCT t.gstin_ded) DESC LIMIT 1""")
+    top_nname = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r7 r
+        JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+        GROUP BY r.gstin ORDER BY COUNT(DISTINCT t.deductee_name) DESC LIMIT 1""")
+    top_tdsa = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r7 r
+        JOIN public.tbl_gst_rtn_r7_tdsa t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+        GROUP BY r.gstin ORDER BY SUM(t.iamt + t.camt + t.samt) DESC LIMIT 1""")
+    print(f"  R7 argmax  TDS={top_tds} #gstins={top_ngstin} #names={top_nname} tdsa={top_tdsa}")
+    problems += [] if top_tds == '03AABCP9999J2DM' else [f"R7 top-TDS moved: {top_tds}"]
+    problems += [] if top_ngstin == '27AABCP0001K1ZM' else [f"R7 top-#gstins moved: {top_ngstin}"]
+    problems += [] if top_nname == '06AABCE0001M1ZP' else [f"R7 top-#names moved: {top_nname}"]
+    problems += [] if top_tdsa != top_tds else ["R7 tdsa argmax == tds argmax (collision)"]
+
+    # 14) filing gap present (SURAT skips 062025)
+    gap = scalar("""SELECT COUNT(*) FROM public.tbl_gst_rtn_r3b
+                    WHERE gstin = '24AABCE0001D9AA' AND ret_period = '062025'""")
+    problems += [] if gap == 0 else ["SURAT 062025 return exists (gap lost)"]
+
+    # 15) 3B top-taxpayer per measure preserved + isuprev/osupdet top-4 differ
+    top_turn = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o
+          ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+        GROUP BY r.gstin ORDER BY SUM(o.txval) DESC LIMIT 1""")
+    top_igst = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o
+          ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+        GROUP BY r.gstin ORDER BY SUM(o.iamt) DESC LIMIT 1""")
+    top_itc = scalar("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n
+          ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg
+        GROUP BY r.gstin ORDER BY SUM(n.iamt + n.camt + n.samt) DESC LIMIT 1""")
+    print(f"  3B argmax  turnover={top_turn} igst={top_igst} itc={top_itc}")
+    problems += [] if top_turn == '24AABCE0002E9AA' else [f"3B top-turnover moved: {top_turn}"]
+    problems += [] if top_igst == '24AABCE0003F9AA' else [f"3B top-IGST moved: {top_igst}"]
+    problems += [] if len({top_turn, top_igst, top_itc}) == 3 else ["3B measure argmaxes collide"]
+
+    cur.execute("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o
+          ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+        GROUP BY r.gstin ORDER BY SUM(o.txval) DESC LIMIT 4""")
+    top4_osup = {row[0] for row in cur.fetchall()}
+    cur.execute("""
+        SELECT r.gstin FROM public.tbl_gst_rtn_r3b r
+        JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+        JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev iv
+          ON iv.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+        GROUP BY r.gstin ORDER BY SUM(iv.txval) DESC LIMIT 4""")
+    top4_rcm = {row[0] for row in cur.fetchall()}
+    print(f"  top-4 osupdet={sorted(top4_osup)}\n  top-4 isuprev={sorted(top4_rcm)}")
+    problems += [] if top4_osup != top4_rcm else ["osupdet/isuprev top-4 sets identical"]
 
     if problems:
         raise AssertionError("Adversarial-invariant checks FAILED:\n  - " + "\n  - ".join(problems))
