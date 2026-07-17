@@ -26,11 +26,21 @@ class Settings(BaseSettings):
     qwen_base_url: str = "https://api.jaypokale.me/v1"
     qwen_api_key: str = "EMPTY"
     qwen_model: str = "Qwen/Qwen3.6-27B-FP8"
-    # Reasoning model in a 32K window with a big static prompt is TIGHT: the full
-    # static schema is ~28.8K Qwen tokens (higher than the 26.5K o200k estimate), so
-    # attempt-1 leaves only ~4K. 3000 fits with a ~1K buffer for self-correction
-    # growth; over-length correction turns are caught gracefully in VLLMClient.
-    qwen_max_tokens: int = 3000
+    # Reasoning model in a 32K window with a big static prompt is TIGHT. v2 (39-table
+    # normalized schema) measured the full static prompt at 30.5K real Qwen tokens
+    # (up from v1's 28.8K — the added GSTREG module + 17-table 3B DDL/descriptions
+    # outweigh the smaller MV), leaving only ~2.2K room (32768 window).
+    #   budget: prompt + max_tokens <= 32768  ->  demos + max_tokens <= 2193.
+    # 1500 (earlier value) left only 693 tok of demo room, so the FEW-SHOT config
+    # (static schema + retrieved demos) overflowed on GSTR-3B questions — the
+    # normalized 3B demos are the longest (worst-case 5-demo block ~1361 Qwen tok),
+    # tipping past 32768 -> server 400 -> VLLMClient returns "" -> 21 empty-SQL fails.
+    # Thinking-OFF output is tiny (longest gold SQL = 238 tok), so 1500 was mostly
+    # wasted headroom. 500 gives 2x output margin AND 1693 tok of demo room (clears
+    # the 1361 worst-case with ~330 slack). Changes zero already-fitting answers;
+    # only rescues the force-empties. Over-length correction turns still caught
+    # gracefully in VLLMClient. (Baseline/full-RAG never overflowed; 500 harmless there.)
+    qwen_max_tokens: int = 500
     # Qwen3.6 is a reasoning model (~30s/call). The server honors
     # extra_body={"chat_template_kwargs":{"enable_thinking":False}} to fully
     # disable thinking → ~24x faster (30.9s→1.3s), 65-tok output, SQL still
@@ -48,7 +58,7 @@ class Settings(BaseSettings):
 
     # ── Phase 5-B: RAG (retrieval-augmented). Baseline ignores all of these. ──
     embed_model: str = "BAAI/bge-large-en-v1.5"   # challenger: BAAI/bge-m3 (intrinsic compare)
-    rag_top_k_tables: int = 5
+    rag_top_k_tables: int = 6       # v2 fix: k=6 catches rank-6 sibling-crowded leaves (#68-class); intrinsic full-cover 98.3% (k5 97.7)
     rag_top_k_fewshots: int = 5     # locked via Grid-B sweep (k=5 > k=3; fixed #59/#94/#109)
     rag_index_dir: str = "index"
     qsql_store_path: str = "evaluation/rag_qsql_store.json"
