@@ -46,7 +46,9 @@ def _norm_cell(v: object) -> object:
 
 
 def _cols(df: pd.DataFrame) -> list[list]:
-    return [[_norm_cell(v) for v in df[c].tolist()] for c in df.columns]
+    # positional iloc: df[name] returns a DataFrame (not Series) when a
+    # prediction projects the same column twice (SELECT a, a)
+    return [[_norm_cell(v) for v in df.iloc[:, i].tolist()] for i in range(df.shape[1])]
 
 
 def execution_match(

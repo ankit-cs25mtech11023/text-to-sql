@@ -134,6 +134,13 @@ class TestPermutationsBlowupFix:
         pred_ok = df({"x": [1, 2], "y": [1, 2]})
         assert execution_match(gold, pred_ok)
 
+    def test_same_named_prediction_columns(self):
+        # SELECT a, a produces two columns with the SAME name; pandas df[name]
+        # then returns a DataFrame, which crashed _cols before the iloc fix
+        gold = df({"g": [1, 2]})
+        pred = pd.DataFrame([[1, 1], [2, 2]], columns=["a", "a"])
+        assert execution_match(gold, pred)
+
 
 class TestExactMatch:
     def test_whitespace_and_case_normalized(self):
