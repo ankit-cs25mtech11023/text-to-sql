@@ -1,0 +1,536 @@
+id,module,difficulty,category,question,gold_sql,runs,ex_passes,ver_passes,em_passes,ex_rate,ver_rate,last_pred_sql,last_error
+1,EWB,simple,aggregation,How many e-way bills are there?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb;,
+2,EWB,simple,aggregation,What is the total assessable value across all e-way bills?,SELECT SUM(assval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT SUM(assval) AS v FROM public.tbl_ewb_parta_ewb;,
+3,EWB,simple,domain_specific,What is the total IGST collected on inter-state e-way bills?,SELECT SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb WHERE frstat <> tostat;,3,3,3,0,1.0,1.0,SELECT SUM(igstval) AS total_igst FROM public.tbl_ewb_parta_ewb WHERE frstat <> tostat;,
+4,EWB,simple,filtering,How many e-way bills are cancelled?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'CNL';,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'CNL';,
+5,EWB,simple,domain_specific,What is the total tax (CGST + SGST + IGST) collected across all e-way bills?,SELECT SUM(cgstval + sgstval + igstval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT SUM(cgstval + sgstval + igstval) AS v FROM public.tbl_ewb_parta_ewb;,
+6,EWB,simple,filtering,How many e-way bills are active?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'ACT';,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'ACT';,
+7,EWB,simple,filtering,How many e-way bills have expired?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'EXP';,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE status = 'EXP';,
+8,EWB,simple,aggregation,What is the total CGST across all e-way bills?,SELECT SUM(cgstval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,0,1.0,1.0,SELECT SUM(cgstval) AS total_cgst FROM public.tbl_ewb_parta_ewb;,
+9,EWB,simple,aggregation,What is the total SGST across all e-way bills?,SELECT SUM(sgstval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT SUM(sgstval) AS v FROM public.tbl_ewb_parta_ewb;,
+10,EWB,simple,aggregation,What is the total IGST across all e-way bills?,SELECT SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb;,
+11,EWB,simple,aggregation,How many distinct consignors are there?,SELECT COUNT(DISTINCT frgstin) AS n FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT frgstin) AS n FROM public.tbl_ewb_parta_ewb;,
+12,EWB,simple,aggregation,How many distinct destination states appear in e-way bills?,SELECT COUNT(DISTINCT tostat) AS n FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT tostat) AS n FROM public.tbl_ewb_parta_ewb;,
+13,EWB,simple,quirk,"What is the total invoice value (gross, including tax) across all e-way bills?","SELECT SUM(""InvVal"") AS v FROM public.tbl_ewb_parta_ewb;",3,3,3,3,1.0,1.0,"SELECT SUM(""InvVal"") AS v FROM public.tbl_ewb_parta_ewb;",
+14,EWB,simple,aggregation,What is the average assessable value of an e-way bill?,SELECT AVG(assval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,0,1.0,1.0,SELECT AVG(assval) AS avg_assessable_value FROM public.tbl_ewb_parta_ewb;,
+15,EWB,simple,aggregation,What is the highest assessable value among all e-way bills?,SELECT MAX(assval) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,3,1.0,1.0,SELECT MAX(assval) AS v FROM public.tbl_ewb_parta_ewb;,
+16,EWB,simple,aggregation,How many item lines are there across all e-way bills?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb_itemlist;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb_itemlist;,
+17,EWB,simple,aggregation,How many distinct HSN codes appear in e-way bill items?,SELECT COUNT(DISTINCT hsncod) AS n FROM public.tbl_ewb_parta_ewb_itemlist;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT hsncod) AS n FROM public.tbl_ewb_parta_ewb_itemlist;,
+18,EWB,simple,domain_specific,How many e-way bills are intra-state?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE frstat = tostat;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_ewb_parta_ewb
+WHERE frstat = tostat;",
+19,EWB,simple,domain_specific,How many e-way bills are inter-state?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE frstat <> tostat;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_ewb_parta_ewb
+WHERE frstat <> tostat;",
+20,EWB,simple,aggregation,What is the total assessable amount across all e-way bill items?,SELECT SUM(assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist;,3,3,3,3,1.0,1.0,SELECT SUM(assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist;,
+21,EWB,moderate,grouping,How many e-way bills are there for each status?,"SELECT status, COUNT(*) AS n FROM public.tbl_ewb_parta_ewb GROUP BY status;",3,3,3,3,1.0,1.0,"SELECT status, COUNT(*) AS n FROM public.tbl_ewb_parta_ewb GROUP BY status;",
+22,EWB,moderate,grouping,What is the total assessable value for each consignor state?,"SELECT frstat, SUM(assval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY frstat;",3,3,3,3,1.0,1.0,"SELECT frstat, SUM(assval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY frstat;",
+23,EWB,moderate,grouping,How many e-way bills originate from each state?,"SELECT frstat, COUNT(*) AS n FROM public.tbl_ewb_parta_ewb GROUP BY frstat;",3,3,3,0,1.0,1.0,"SELECT frstat, COUNT(*) AS n FROM public.tbl_ewb_parta_ewb GROUP BY frstat LIMIT 100;",
+24,EWB,moderate,ranking,Which 3 HSN codes have the highest total assessable amount?,SELECT hsncod FROM public.tbl_ewb_parta_ewb_itemlist GROUP BY hsncod ORDER BY SUM(assamt) DESC LIMIT 3;,3,3,3,3,1.0,1.0,"SELECT hsncod
+FROM public.tbl_ewb_parta_ewb_itemlist
+GROUP BY hsncod
+ORDER BY SUM(assamt) DESC
+LIMIT 3;",
+25,EWB,moderate,ranking,Which destination state has the highest total IGST in e-way bills?,SELECT tostat FROM public.tbl_ewb_parta_ewb GROUP BY tostat ORDER BY SUM(igstval) DESC LIMIT 1;,3,3,3,3,1.0,1.0,SELECT tostat FROM public.tbl_ewb_parta_ewb GROUP BY tostat ORDER BY SUM(igstval) DESC LIMIT 1;,
+26,EWB,moderate,ranking,List the top 3 consignors by total assessable value.,SELECT frgstin FROM public.tbl_ewb_parta_ewb GROUP BY frgstin ORDER BY SUM(assval) DESC LIMIT 3;,3,3,3,3,1.0,1.0,SELECT frgstin FROM public.tbl_ewb_parta_ewb GROUP BY frgstin ORDER BY SUM(assval) DESC LIMIT 3;,
+27,EWB,moderate,quirk,"What is the average travel distance declared on e-way bills, in km?",SELECT AVG(CAST(travdist AS numeric)) AS v FROM public.tbl_ewb_parta_ewb;,3,3,3,0,1.0,1.0,"SELECT AVG(CAST(travdist AS numeric)) AS avg_travel_distance_km
+FROM public.tbl_ewb_parta_ewb;",
+28,EWB,moderate,grouping,What is the total IGST for each destination state?,"SELECT tostat, SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY tostat;",3,3,3,3,1.0,1.0,"SELECT tostat, SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY tostat;",
+29,EWB,moderate,aggregation,How many e-way bills were cancelled according to the cancellation event log?,SELECT COUNT(*) AS n FROM public.tbl_ewb_partb_ewb_canceldet;,3,3,3,0,1.0,1.0,"SELECT COUNT(DISTINCT pb.idtbl_ewb_partb_ewb) AS n
+FROM public.tbl_ewb_partb_ewb pb
+JOIN public.tbl_ewb_partb_ewb_canceldet cd ON cd.idtbl_ewb_partb_ewb = pb.idtbl_ewb_partb_ewb;",
+30,EWB,moderate,aggregation,How many rejection events were recorded on e-way bills?,SELECT COUNT(*) AS n FROM public.tbl_ewb_partb_ewb_rejdtl;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_partb_ewb_rejdtl;,
+31,EWB,moderate,aggregation,How many vehicle/transport detail records are there in Part-B?,SELECT COUNT(*) AS n FROM public.tbl_ewb_partb_ewb_partbdet;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_partb_ewb_partbdet;,
+32,EWB,moderate,grouping,What is the total assessable amount for each HSN code?,"SELECT hsncod, SUM(assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist GROUP BY hsncod;",3,3,3,0,1.0,1.0,"SELECT hsncod, SUM(assamt) AS total_assessable_amount FROM public.tbl_ewb_parta_ewb_itemlist GROUP BY hsncod LIMIT 100;",
+33,EWB,moderate,ranking,Which HSN code appears on the most item lines?,SELECT hsncod FROM public.tbl_ewb_parta_ewb_itemlist GROUP BY hsncod ORDER BY COUNT(*) DESC LIMIT 1;,3,3,3,3,1.0,1.0,"SELECT hsncod
+FROM public.tbl_ewb_parta_ewb_itemlist
+GROUP BY hsncod
+ORDER BY COUNT(*) DESC
+LIMIT 1;",
+34,EWB,moderate,grouping,What is the average assessable value of e-way bills for each status?,"SELECT status, AVG(assval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY status;",3,3,3,0,1.0,1.0,"SELECT status, AVG(assval) AS avg_assval
+FROM public.tbl_ewb_parta_ewb
+GROUP BY status
+LIMIT 100;",
+35,EWB,challenging,join,What is the total assessable amount of items on active e-way bills?,SELECT SUM(i.assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist i JOIN public.tbl_ewb_parta_ewb e ON i.idtbl_ewb_parta_ewb = e.idtbl_ewb_parta_ewb WHERE e.status = 'ACT';,3,3,3,3,1.0,1.0,"SELECT SUM(i.assamt) AS v
+FROM public.tbl_ewb_parta_ewb_itemlist i
+JOIN public.tbl_ewb_parta_ewb e ON i.idtbl_ewb_parta_ewb = e.idtbl_ewb_parta_ewb
+WHERE e.status = 'ACT';",
+36,EWB,challenging,join,How many e-way bills had their validity extended?,SELECT COUNT(DISTINCT pb.idtbl_ewb_partb_ewb) AS n FROM public.tbl_ewb_partb_ewb pb JOIN public.tbl_ewb_partb_ewb_extenddet x ON x.idtbl_ewb_partb_ewb = pb.idtbl_ewb_partb_ewb;,3,3,3,0,1.0,1.0,"SELECT COUNT(DISTINCT pb.ewb_no) AS n
+FROM public.tbl_ewb_partb_ewb pb
+JOIN public.tbl_ewb_partb_ewb_extenddet ed
+  ON ed.idtbl_ewb_partb_ewb = pb.idtbl_ewb_partb_ewb;",
+37,EWB,challenging,grouping,What is the total assessable value of e-way bills for each status?,"SELECT status, SUM(assval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY status;",3,3,3,0,1.0,1.0,"SELECT status, SUM(assval) AS total_assessable_value
+FROM public.tbl_ewb_parta_ewb
+GROUP BY status
+LIMIT 100;",
+38,EWB,challenging,ranking,Which origin state has the most e-way bills?,SELECT frstat FROM public.tbl_ewb_parta_ewb GROUP BY frstat ORDER BY COUNT(*) DESC LIMIT 1;,3,3,3,3,1.0,1.0,SELECT frstat FROM public.tbl_ewb_parta_ewb GROUP BY frstat ORDER BY COUNT(*) DESC LIMIT 1;,
+39,EWB,challenging,join,How many e-way bills have at least one item taxed at 18% IGST?,SELECT COUNT(DISTINCT i.idtbl_ewb_parta_ewb) AS n FROM public.tbl_ewb_parta_ewb_itemlist i WHERE i.igstrt = 18;,3,3,3,0,1.0,1.0,"SELECT COUNT(DISTINCT e.ewbno) AS n
+FROM public.tbl_ewb_parta_ewb e
+JOIN public.tbl_ewb_parta_ewb_itemlist i
+  ON i.idtbl_ewb_parta_ewb = e.idtbl_ewb_parta_ewb
+WHERE i.igstrt = 18
+LIMIT 100;",
+40,EWB,challenging,filtering,What is the total assessable amount of e-way bill items taxed at 18% IGST?,SELECT SUM(assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist WHERE igstrt = 18;,3,3,3,3,1.0,1.0,SELECT SUM(assamt) AS v FROM public.tbl_ewb_parta_ewb_itemlist WHERE igstrt = 18;,
+41,EWB,challenging,subquery,How many e-way bills have a total tax (CGST+SGST+IGST) above the average?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE (cgstval + sgstval + igstval) > (SELECT AVG(cgstval + sgstval + igstval) FROM public.tbl_ewb_parta_ewb);,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_ewb_parta_ewb
+WHERE (cgstval + sgstval + igstval) > (
+    SELECT AVG(cgstval + sgstval + igstval)
+    FROM public.tbl_ewb_parta_ewb
+);",
+42,EWB,challenging,grouping,What is the total IGST for each origin state?,"SELECT frstat, SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY frstat;",3,3,3,3,1.0,1.0,"SELECT frstat, SUM(igstval) AS v FROM public.tbl_ewb_parta_ewb GROUP BY frstat;",
+43,GSTR-3B,simple,aggregation,How many GSTR-3B returns were filed?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r;,3,3,3,0,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b;,
+44,GSTR-3B,simple,aggregation,How many distinct taxpayers filed GSTR-3B?,SELECT COUNT(DISTINCT r.gstin) AS n FROM public.tbl_gst_rtn_r3b r;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT r.gstin) AS n FROM public.tbl_gst_rtn_r3b r;,
+45,GSTR-3B,simple,domain_specific,What is the total SGST paid in cash in financial year 2024-25?,SELECT SUM(pc.spd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8;,3,0,0,0,0.0,0.0,,Empty SQL query.
+46,GSTR-3B,simple,domain_specific,What is the total outward taxable value (regular sales) across all GSTR-3B returns?,SELECT SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,3,0,0,0,0.0,0.0,,Empty SQL query.
+47,GSTR-3B,simple,domain_specific,What is the total SGST payable across all GSTR-3B returns?,SELECT SUM(o.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,3,3,3,3,1.0,1.0,SELECT SUM(o.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,
+48,GSTR-3B,simple,domain_specific,What is the total IGST payable across all GSTR-3B returns?,SELECT SUM(o.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,3,3,3,3,1.0,1.0,SELECT SUM(o.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,
+49,GSTR-3B,simple,filtering,How many GSTR-3B returns were filed under CENTER jurisdiction?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin WHERE d.appr_auth = 'CENTER';,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+WHERE d.appr_auth = 'CENTER';",
+50,GSTR-3B,simple,filtering,How many GSTR-3B returns were filed under STATE jurisdiction?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin WHERE d.appr_auth = 'STATE';,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+WHERE d.appr_auth = 'STATE';",
+51,GSTR-3B,simple,domain_specific,What is the total net SGST ITC available across all GSTR-3B returns?,SELECT SUM(n.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg;,3,0,0,0,0.0,0.0,,Empty SQL query.
+52,GSTR-3B,simple,domain_specific,What is the total value of inward supplies liable to reverse charge across all returns?,SELECT SUM(iv.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev iv ON iv.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,3,3,3,3,1.0,1.0,"SELECT SUM(iv.txval) AS v
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_sup_details s
+  ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev iv
+  ON iv.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;",
+53,GSTR-3B,simple,filtering,How many GSTR-3B returns were filed in financial year 2025-26?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 9;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period
+WHERE m.fy_flag = 9;",
+54,GSTR-3B,simple,domain_specific,What is the total IGST paid through ITC across all GSTR-3B returns?,SELECT SUM(pi.i_pdi + pi.i_pdc + pi.i_pds) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_itc pi ON pi.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt;,3,3,3,3,1.0,1.0,SELECT SUM(pi.i_pdi + pi.i_pdc + pi.i_pds) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_itc pi ON pi.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt;,
+55,GSTR-3B,simple,aggregation,How many distinct divisions appear in GSTR-3B returns?,SELECT COUNT(DISTINCT j.division) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd;,3,3,3,3,1.0,1.0,"SELECT COUNT(DISTINCT j.division) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd;",
+56,GSTR-3B,simple,quirk,How many distinct ranges appear in GSTR-3B returns?,"SELECT COUNT(DISTINCT j.""range"") AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd;",3,3,3,3,1.0,1.0,"SELECT COUNT(DISTINCT j.""range"") AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd;",
+57,GSTR-3B,simple,aggregation,What is the average net SGST ITC available per GSTR-3B return?,SELECT AVG(n.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg;,3,0,0,0,0.0,0.0,,Empty SQL query.
+58,GSTR-3B,simple,domain_specific,What is the total SGST paid in cash across all GSTR-3B returns?,SELECT SUM(pc.spd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt;,3,3,3,3,1.0,1.0,SELECT SUM(pc.spd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt;,
+59,GSTR-3B,moderate,ranking,List the top 5 taxpayers by outward taxable value in FY 2025-26.,SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 9 GROUP BY r.gstin ORDER BY SUM(o.txval) DESC LIMIT 5;,3,3,3,0,1.0,1.0,"SELECT r.gstin
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period
+JOIN common.mst_fy_years_t fy ON fy.flag_fy = m.fy_flag
+JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+WHERE fy.desc_year = '2025-26'
+GROUP BY r.gstin
+ORDER BY SUM(o.txval) DESC
+LIMIT 5;",
+60,GSTR-3B,moderate,grouping,What is the total tax paid in cash for each approving authority?,"SELECT d.appr_auth, SUM(pc.ipd + pc.cpd + pc.spd + pc.cspd) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt GROUP BY d.appr_auth;",3,3,3,0,1.0,1.0,"SELECT d.appr_auth, SUM(c.ipd + c.cpd + c.spd + c.cspd) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN public.tbl_gst_rtn_r3b_tx_pmt tp ON tp.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash c ON c.idtbl_gst_rtn_r3b_tx_pmt = tp.idtbl_gst_rtn_r3b_tx_pmt GROUP BY d.appr_auth;",
+61,GSTR-3B,moderate,grouping,What is the total outward taxable value for each division?,"SELECT j.division, SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division;",3,0,0,0,0.0,0.0,,Empty SQL query.
+62,GSTR-3B,moderate,grouping,How many GSTR-3B returns were filed in each financial year?,"SELECT y.desc_year, COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag GROUP BY y.desc_year;",3,3,3,0,1.0,1.0,"SELECT fy.desc_year AS financial_year, COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period
+JOIN common.mst_fy_years_t fy ON fy.flag_fy = m.fy_flag
+GROUP BY fy.desc_year
+ORDER BY fy.desc_year
+LIMIT 100;",
+63,GSTR-3B,moderate,aggregation,What is the average outward taxable value per return in FY 2024-25?,SELECT AVG(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8;,3,0,0,0,0.0,0.0,,Empty SQL query.
+64,GSTR-3B,moderate,ranking,Which 3 divisions have the most GSTR-3B returns?,SELECT j.division FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.division ORDER BY COUNT(*) DESC LIMIT 3;,3,3,3,3,1.0,1.0,"SELECT j.division
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+GROUP BY j.division
+ORDER BY COUNT(*) DESC
+LIMIT 3;",
+65,GSTR-3B,moderate,domain_specific,What is the total net ITC available (SGST + CGST + IGST) across all GSTR-3B returns?,SELECT SUM(n.samt + n.camt + n.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg;,3,3,3,0,1.0,1.0,"SELECT SUM(n.iamt + n.camt + n.samt) AS v
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg;",
+66,GSTR-3B,moderate,filtering,How many GSTR-3B returns reported inward supplies under reverse charge?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev iv ON iv.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details WHERE iv.txval > 0;,3,0,3,0,0.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_sup_details s
+  ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev i
+  ON i.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;",
+67,GSTR-3B,moderate,grouping,What is the total outward taxable value for each approving authority?,"SELECT d.appr_auth, SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY d.appr_auth;",3,0,0,0,0.0,0.0,,Empty SQL query.
+68,GSTR-3B,moderate,domain_specific,What is the total tax payable (SGST + CGST + IGST) across all GSTR-3B returns?,SELECT SUM(o.samt + o.camt + o.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,3,3,3,0,1.0,1.0,SELECT SUM(o.iamt + o.camt + o.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details;,
+69,GSTR-3B,moderate,grouping,What is the total SGST paid in cash for each division?,"SELECT j.division, SUM(pc.spd) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt GROUP BY j.division;",3,0,0,0,0.0,0.0,,Empty SQL query.
+70,GSTR-3B,moderate,grouping,How many GSTR-3B returns were filed under each approving authority?,"SELECT d.appr_auth, COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin GROUP BY d.appr_auth;",3,3,3,0,1.0,1.0,"SELECT d.appr_auth, COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin GROUP BY d.appr_auth LIMIT 100;",
+71,GSTR-3B,challenging,decode,"What is the total CGST paid in cash for each financial year, labelled by year?","SELECT y.desc_year, SUM(pc.cpd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag GROUP BY y.desc_year;",3,0,0,0,0.0,0.0,,Empty SQL query.
+72,GSTR-3B,challenging,ranking,List the top 4 taxpayers by total outward taxable value across all years.,SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY r.gstin ORDER BY SUM(o.txval) DESC LIMIT 4;,3,0,0,0,0.0,0.0,,Empty SQL query.
+73,GSTR-3B,challenging,decode,What is the total outward taxable value per month name in FY 2024-25?,"SELECT m.month_desc, SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8 GROUP BY m.month_desc;",3,0,0,0,0.0,0.0,,Empty SQL query.
+74,GSTR-3B,challenging,decode,What is the total outward taxable value per quarter in FY 2024-25?,"SELECT MAX(m.quarter) AS quarter, SUM(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8 GROUP BY m.quarter_all_mnths;",3,0,0,0,0.0,0.0,,Empty SQL query.
+75,GSTR-3B,challenging,ranking,Which division paid the most tax in cash?,SELECT j.division FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt GROUP BY j.division ORDER BY SUM(pc.ipd + pc.cpd + pc.spd + pc.cspd) DESC LIMIT 1;,3,0,0,0,0.0,0.0,,Empty SQL query.
+76,GSTR-3B,challenging,grouping,What is the total tax payable (SGST + CGST + IGST) for each division?,"SELECT j.division, SUM(o.samt + o.camt + o.iamt) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division;",3,0,0,0,0.0,0.0,,Empty SQL query.
+77,GSTR-3B,challenging,subquery,How many taxpayers in FY 2024-25 had a total outward taxable value above the average taxpayer's total?,"SELECT COUNT(*) AS n FROM (SELECT r.gstin, SUM(o.txval) AS tot FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8 GROUP BY r.gstin) q WHERE q.tot > (SELECT AVG(tot) FROM (SELECT r2.gstin, SUM(o2.txval) AS tot FROM public.tbl_gst_rtn_r3b r2 JOIN public.tbl_gst_rtn_r3b_sup_details s2 ON s2.idtbl_gst_rtn_r3b = r2.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o2 ON o2.idtbl_gst_rtn_r3b_sup_details = s2.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m2 ON m2.ret_period_fl = r2.ret_period WHERE m2.fy_flag = 8 GROUP BY r2.gstin) q2);",3,0,0,0,0.0,0.0,,Empty SQL query.
+78,GSTR-3B,challenging,decode,"How many distinct taxpayers filed in each financial year, labelled by year?","SELECT y.desc_year, COUNT(DISTINCT r.gstin) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag GROUP BY y.desc_year;",3,3,3,3,1.0,1.0,"SELECT y.desc_year, COUNT(DISTINCT r.gstin) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag GROUP BY y.desc_year;",
+79,GSTR-3B,challenging,ranking,List the top 5 taxpayers by total tax payable (SGST + CGST + IGST) in FY 2024-25.,SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period WHERE m.fy_flag = 8 GROUP BY r.gstin ORDER BY SUM(o.samt + o.camt + o.iamt) DESC LIMIT 5;,3,0,0,0,0.0,0.0,,Empty SQL query.
+80,GSTR-3B,challenging,grouping,What is the total reverse-charge SGST for each division?,"SELECT j.division, SUM(iv.samt) AS v FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details s ON s.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev iv ON iv.idtbl_gst_rtn_r3b_sup_details = s.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division;",3,0,0,0,0.0,0.0,,Empty SQL query.
+81,GSTR-7,simple,aggregation,How many GSTR-7 returns have been filed?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7;,
+82,GSTR-7,simple,aggregation,How many TDS amendments were filed?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa;,
+83,GSTR-7,simple,domain_specific,What is the total TDS deducted across all GSTR-7 returns?,SELECT SUM(iamt + camt + samt) AS v FROM public.tbl_gst_rtn_r7_tds;,3,3,3,0,1.0,1.0,SELECT SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7_tds t;,
+84,GSTR-7,simple,aggregation,How many distinct deductors filed GSTR-7 returns?,SELECT COUNT(DISTINCT gstin) AS n FROM public.tbl_gst_rtn_r7;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT gstin) AS n FROM public.tbl_gst_rtn_r7;,
+85,GSTR-7,simple,aggregation,How many distinct deductees appear in GSTR-7 TDS records?,SELECT COUNT(DISTINCT gstin_ded) AS n FROM public.tbl_gst_rtn_r7_tds;,3,3,3,0,1.0,1.0,"SELECT COUNT(DISTINCT t.gstin_ded) AS n
+FROM public.tbl_gst_rtn_r7_tds t;",
+86,GSTR-7,simple,aggregation,How many deductee-wise TDS rows are there?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tds;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tds;,
+87,GSTR-7,simple,aggregation,How many invoice-level TDS rows are there?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tds_inv;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tds_inv;,
+88,GSTR-7,simple,domain_specific,What is the total IGST TDS withheld across all deductee records?,SELECT SUM(iamt) AS v FROM public.tbl_gst_rtn_r7_tds;,3,3,3,3,1.0,1.0,SELECT SUM(iamt) AS v FROM public.tbl_gst_rtn_r7_tds;,
+89,GSTR-7,simple,domain_specific,What is the total CGST TDS withheld across all deductee records?,SELECT SUM(camt) AS v FROM public.tbl_gst_rtn_r7_tds;,3,3,3,3,1.0,1.0,SELECT SUM(camt) AS v FROM public.tbl_gst_rtn_r7_tds;,
+90,GSTR-7,simple,domain_specific,What is the total base amount on which TDS was deducted?,SELECT SUM(amt_ded) AS v FROM public.tbl_gst_rtn_r7_tds;,3,3,3,3,1.0,1.0,SELECT SUM(amt_ded) AS v FROM public.tbl_gst_rtn_r7_tds;,
+91,GSTR-7,simple,aggregation,How many distinct return periods appear in GSTR-7 returns?,SELECT COUNT(DISTINCT fp) AS n FROM public.tbl_gst_rtn_r7;,3,3,3,3,1.0,1.0,SELECT COUNT(DISTINCT fp) AS n FROM public.tbl_gst_rtn_r7;,
+92,GSTR-7,simple,aggregation,What is the total invoice value across all invoice-level TDS rows?,SELECT SUM(ival) AS v FROM public.tbl_gst_rtn_r7_tds_inv;,3,3,3,0,1.0,1.0,SELECT SUM(ival) AS total_invoice_value FROM public.tbl_gst_rtn_r7_tds_inv;,
+93,GSTR-7,simple,aggregation,How many tax-payable rows are recorded for GSTR-7 returns?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tax_pay;,3,3,3,3,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tax_pay;,
+94,GSTR-7,moderate,join,List each deductor and the total TDS they deducted.,"SELECT r.gstin, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin AS deductor_gstin,
+    SUM(t.iamt + t.camt + t.samt) AS total_tds_deducted
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.gstin
+LIMIT 100;",
+95,GSTR-7,moderate,join,What is the total TDS deducted in each return period?,"SELECT r.fp, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.fp;",3,3,3,0,1.0,1.0,"SELECT r.fp, SUM(t.iamt + t.camt + t.samt) AS total_tds_deducted
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.fp
+ORDER BY r.fp
+LIMIT 100;",
+96,GSTR-7,moderate,grouping,What is the total TDS deducted from each deductee?,"SELECT gstin_ded, SUM(iamt + camt + samt) AS v FROM public.tbl_gst_rtn_r7_tds GROUP BY gstin_ded;",3,3,3,0,1.0,1.0,"SELECT t.gstin_ded, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7_tds t GROUP BY t.gstin_ded LIMIT 100;",
+97,GSTR-7,moderate,ranking,Which deductee had the highest total TDS deducted from them?,SELECT gstin_ded FROM public.tbl_gst_rtn_r7_tds GROUP BY gstin_ded ORDER BY SUM(iamt + camt + samt) DESC LIMIT 1;,3,3,3,0,1.0,1.0,"SELECT t.gstin_ded
+FROM public.tbl_gst_rtn_r7_tds t
+GROUP BY t.gstin_ded
+ORDER BY SUM(t.iamt + t.camt + t.samt) DESC
+LIMIT 1;",
+98,GSTR-7,moderate,grouping,How many GSTR-7 returns did each deductor file?,"SELECT gstin, COUNT(*) AS n FROM public.tbl_gst_rtn_r7 GROUP BY gstin;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    COUNT(*) AS n_returns
+FROM public.tbl_gst_rtn_r7 r
+GROUP BY r.gstin
+LIMIT 100;",
+99,GSTR-7,moderate,domain_specific,What is the total TDS withheld at the invoice level across all returns?,SELECT SUM(iamt + camt + samt) AS v FROM public.tbl_gst_rtn_r7_tds_inv;,3,3,3,3,1.0,1.0,SELECT SUM(iamt + camt + samt) AS v FROM public.tbl_gst_rtn_r7_tds_inv;,
+100,GSTR-7,moderate,aggregation,What is the average invoice value across invoice-level TDS rows?,SELECT AVG(ival) AS v FROM public.tbl_gst_rtn_r7_tds_inv;,3,3,3,0,1.0,1.0,SELECT AVG(ival) AS avg_invoice_value FROM public.tbl_gst_rtn_r7_tds_inv;,
+101,GSTR-7,moderate,filtering,How many GSTR-7 returns were filed for the period October 2025?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7 WHERE fp = '102025';,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r7
+WHERE fp = '102025';",
+102,GSTR-7,moderate,ranking,List the top 3 deductees by total base amount on which TDS was deducted.,SELECT gstin_ded FROM public.tbl_gst_rtn_r7_tds GROUP BY gstin_ded ORDER BY SUM(amt_ded) DESC LIMIT 3;,3,3,3,0,1.0,1.0,"SELECT gstin_ded, SUM(amt_ded) AS total_base_amount FROM public.tbl_gst_rtn_r7_tds GROUP BY gstin_ded ORDER BY total_base_amount DESC LIMIT 3;",
+103,GSTR-7,challenging,ranking,Which deductor deducted TDS from the most distinct deductees?,SELECT r.gstin FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin ORDER BY COUNT(DISTINCT t.gstin_ded) DESC LIMIT 1;,3,3,3,3,1.0,1.0,"SELECT r.gstin
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.gstin
+ORDER BY COUNT(DISTINCT t.gstin_ded) DESC
+LIMIT 1;",
+104,GSTR-7,challenging,join,What is the total TDS deducted by each deductor for the period October 2025?,"SELECT r.gstin, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 WHERE r.fp = '102025' GROUP BY r.gstin;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    SUM(t.iamt + t.camt + t.samt) AS v
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+WHERE r.fp = '102025'
+GROUP BY r.gstin
+LIMIT 100;",
+105,GSTR-7,challenging,domain_specific,What is the total tax payable (IGST + CGST + SGST) declared across all GSTR-7 returns?,SELECT SUM(igst_tx + cgst_tx + sgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_pay;,3,3,3,3,1.0,1.0,SELECT SUM(igst_tx + cgst_tx + sgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_pay;,
+106,GSTR-7,challenging,domain_specific,What is the total tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?,SELECT SUM(igst_tx + cgst_tx + sgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash;,3,3,3,3,1.0,1.0,SELECT SUM(igst_tx + cgst_tx + sgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash;,
+107,GSTR-7,challenging,join,How many invoice-level TDS rows does each deductor have?,"SELECT r.gstin, COUNT(*) AS n FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 JOIN public.tbl_gst_rtn_r7_tds_inv iv ON iv.idtbl_gst_rtn_r7_tds = t.idtbl_gst_rtn_r7_tds GROUP BY r.gstin;",3,3,3,0,1.0,1.0,"SELECT r.gstin, COUNT(iv.idtbl_gst_rtn_r7_tds_inv) AS n
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+JOIN public.tbl_gst_rtn_r7_tds_inv iv ON iv.idtbl_gst_rtn_r7_tds = t.idtbl_gst_rtn_r7_tds
+GROUP BY r.gstin
+LIMIT 100;",
+108,GSTR-7,challenging,ranking,Which deductor deducted the highest total TDS?,SELECT r.gstin FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin ORDER BY SUM(t.iamt + t.camt + t.samt) DESC LIMIT 1;,3,3,3,3,1.0,1.0,"SELECT r.gstin
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.gstin
+ORDER BY SUM(t.iamt + t.camt + t.samt) DESC
+LIMIT 1;",
+109,GSTR-7,challenging,join,What is the total TDS deducted by each deductor in each return period?,"SELECT r.gstin, r.fp, SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin, r.fp;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    r.fp,
+    SUM(t.iamt + t.camt + t.samt) AS total_tds_deducted
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tds t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.gstin, r.fp
+LIMIT 100;",
+110,GSTR-7,challenging,having,Which deductees had TDS deducted in more than one return?,SELECT gstin_ded FROM public.tbl_gst_rtn_r7_tds GROUP BY gstin_ded HAVING COUNT(DISTINCT tbl_gst_rtn_r7) > 1;,3,3,3,0,1.0,1.0,"SELECT t.gstin_ded
+FROM public.tbl_gst_rtn_r7_tds t
+GROUP BY t.gstin_ded
+HAVING COUNT(DISTINCT t.tbl_gst_rtn_r7) > 1
+LIMIT 100;",
+111,GSTR-7,challenging,quirk,What is the earliest filing date among all GSTR-7 returns?,"SELECT MIN(TO_DATE(fil_dt, 'DD-MM-YYYY')) AS v FROM public.tbl_gst_rtn_r7;",3,3,3,3,1.0,1.0,"SELECT MIN(TO_DATE(fil_dt, 'DD-MM-YYYY')) AS v FROM public.tbl_gst_rtn_r7;",
+112,GSTR-7,challenging,domain_specific,What is the total CGST tax payable declared across all GSTR-7 returns?,SELECT SUM(cgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_pay;,3,3,3,3,1.0,1.0,SELECT SUM(cgst_tx) AS v FROM public.tbl_gst_rtn_r7_tax_pay;,
+113,GSTREG,simple,aggregation,How many taxpayers are registered in total?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d;,3,3,3,0,1.0,1.0,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t;,
+114,GSTREG,simple,filtering,How many taxpayers are currently active (registration not cancelled)?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.canc_dt IS NULL;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM common.t_all_delers_api_v_t d
+WHERE d.canc_dt IS NULL;",
+115,GSTREG,simple,filtering,How many taxpayers have had their registration cancelled?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.canc_dt IS NOT NULL;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM common.t_all_delers_api_v_t d
+WHERE d.canc_dt IS NOT NULL;",
+116,GSTREG,simple,domain_specific,What is the GSTIN of the taxpayer whose trade name is Ahmedabad Steel Works?,SELECT d.gstin FROM common.t_all_delers_api_v_t d WHERE d.trdnm ILIKE '%Ahmedabad Steel Works%';,3,3,3,0,1.0,1.0,"SELECT d.gstin
+FROM common.t_all_delers_api_v_t d
+WHERE d.trdnm ILIKE '%Ahmedabad Steel Works%'
+LIMIT 100;",
+117,GSTREG,simple,decode,Which jurisdiction division does the taxpayer Ahmedabad Steel Works belong to?,SELECT j.division FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Ahmedabad Steel Works%';,3,3,3,0,1.0,1.0,"SELECT j.division
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+WHERE d.trdnm ILIKE '%Ahmedabad Steel Works%'
+   OR d.lgnmbzpan ILIKE '%Ahmedabad Steel Works%';",
+118,GSTREG,moderate,decode,"What are the division, range and unit for the taxpayer Gujarat Cement Ltd?","SELECT j.division, j.""range"", j.unit FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Gujarat Cement Ltd%';",3,3,3,0,1.0,1.0,"SELECT j.division, j.""range"", j.unit
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+WHERE d.trdnm ILIKE '%Gujarat Cement Ltd%'
+   OR d.lgnmbzpan ILIKE '%Gujarat Cement Ltd%';",
+119,GSTREG,moderate,grouping,How many taxpayers are registered under each approving authority?,"SELECT d.appr_auth, COUNT(*) AS n FROM common.t_all_delers_api_v_t d GROUP BY d.appr_auth;",3,3,3,3,1.0,1.0,"SELECT d.appr_auth, COUNT(*) AS n FROM common.t_all_delers_api_v_t d GROUP BY d.appr_auth",
+120,GSTREG,moderate,grouping,How many taxpayers are there in each jurisdiction division?,"SELECT j.division, COUNT(*) AS n FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.division;",3,3,3,3,1.0,1.0,"SELECT j.division, COUNT(*) AS n FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.division;",
+121,GSTREG,moderate,grouping,How many taxpayers fall under each constitution of business?,"SELECT d.cobz, COUNT(*) AS n FROM common.t_all_delers_api_v_t d GROUP BY d.cobz;",3,3,3,3,1.0,1.0,"SELECT d.cobz, COUNT(*) AS n FROM common.t_all_delers_api_v_t d GROUP BY d.cobz;",
+122,GSTREG,moderate,filtering,List the trade names of taxpayers with a medium risk profile.,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.risk_profile ILIKE 'MEDIUM%' ORDER BY d.trdnm;,3,3,3,0,1.0,1.0,"SELECT d.trdnm
+FROM common.t_all_delers_api_v_t d
+WHERE d.risk_profile ILIKE 'MEDIUM%'
+ORDER BY d.trdnm
+LIMIT 100;",
+123,GSTREG,moderate,domain_specific,How many active taxpayers are under STATE approving authority?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.canc_dt IS NULL AND d.appr_auth = 'STATE';,3,3,3,0,1.0,1.0,"SELECT COUNT(*) AS n
+FROM common.t_all_delers_api_v_t d
+WHERE d.appr_auth = 'STATE'
+  AND d.canc_dt IS NULL;",
+124,GSTREG,challenging,join,Which taxpayers filed GSTR-3B returns but have since cancelled their registration?,SELECT DISTINCT d.trdnm FROM common.t_all_delers_api_v_t d JOIN public.tbl_gst_rtn_r3b r ON r.gstin = d.gstin WHERE d.canc_dt IS NOT NULL ORDER BY d.trdnm;,3,0,3,0,0.0,1.0,"SELECT DISTINCT r.gstin
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+WHERE d.canc_dt IS NOT NULL
+LIMIT 100;",
+125,GSTREG,moderate,filtering,List the GSTINs of taxpayers with a low risk profile.,SELECT d.gstin FROM common.t_all_delers_api_v_t d WHERE d.risk_profile ILIKE 'LOW%' ORDER BY d.gstin;,3,3,3,0,1.0,1.0,"SELECT d.gstin
+FROM common.t_all_delers_api_v_t d
+WHERE d.risk_profile ILIKE 'LOW%'
+ORDER BY d.gstin
+LIMIT 100;",
+126,GSTREG,moderate,decode,What is the unit (ghatak) for the taxpayer Rajkot Auto Parts?,SELECT j.unit FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Rajkot Auto Parts%';,3,3,3,3,1.0,1.0,"SELECT j.unit
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+WHERE d.trdnm ILIKE '%Rajkot Auto Parts%';",
+127,GSTR-3B,challenging,subquery,Which GSTIN filed a GSTR-3B return for May 2025 but not for June 2025?,SELECT r.gstin FROM public.tbl_gst_rtn_r3b r WHERE r.ret_period = '052025' AND NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r2 WHERE r2.gstin = r.gstin AND r2.ret_period = '062025');,3,3,3,0,1.0,1.0,"SELECT DISTINCT r.gstin
+FROM public.tbl_gst_rtn_r3b r
+WHERE r.ret_period = '052025'
+  AND r.gstin NOT IN (
+    SELECT r2.gstin
+    FROM public.tbl_gst_rtn_r3b r2
+    WHERE r2.ret_period = '062025'
+  )
+LIMIT 100;",
+128,GSTR-3B,challenging,decode,Which month of financial year 2024-25 had the highest total outward taxable value?,SELECT m.month_desc FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE y.desc_year = '2024-25' GROUP BY m.month_desc ORDER BY SUM(o.txval) DESC LIMIT 1;,3,0,0,0,0.0,0.0,,Empty SQL query.
+129,GSTR-3B,moderate,aggregation,What is the total interest paid in cash (all components) across all GSTR-3B returns?,SELECT SUM(pc.i_intrpd + pc.c_intrpd + pc.s_intrpd + pc.cs_intrpd) AS v FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc;,3,3,3,0,1.0,1.0,SELECT SUM(pc.i_intrpd + pc.c_intrpd + pc.s_intrpd + pc.cs_intrpd) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt;,
+130,GSTR-3B,challenging,domain_specific,Which taxpayers paid interest as part of their GSTR-3B cash payments?,SELECT DISTINCT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt WHERE pc.i_intrpd + pc.c_intrpd + pc.s_intrpd + pc.cs_intrpd > 0;,3,3,3,0,1.0,1.0,"SELECT DISTINCT r.gstin
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc ON pc.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt
+WHERE pc.trans_typ = '30003'
+LIMIT 100;",
+131,GSTR-3B,challenging,subquery,Which GSTIN and return period has a payment section with neither cash nor ITC payment lines?,"SELECT r.gstin, r.ret_period FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_tx_pmt p ON p.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash c WHERE c.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt) AND NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_itc i WHERE i.idtbl_gst_rtn_r3b_tx_pmt = p.idtbl_gst_rtn_r3b_tx_pmt);",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    r.ret_period
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_tx_pmt tp ON tp.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_cash pc WHERE pc.idtbl_gst_rtn_r3b_tx_pmt = tp.idtbl_gst_rtn_r3b_tx_pmt
+)
+AND NOT EXISTS (
+    SELECT 1 FROM public.tbl_gst_rtn_r3b_tx_pmt_pd_itc pi WHERE pi.idtbl_gst_rtn_r3b_tx_pmt = tp.idtbl_gst_rtn_r3b_tx_pmt
+)
+LIMIT 100;",
+132,GSTR-3B,moderate,filtering,How many GSTR-3B returns declared reverse-charge inward supplies with a taxable value of exactly zero?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b_sup_details_isuprev iv WHERE iv.txval = 0;,3,0,0,0,0.0,0.0,,Empty SQL query.
+133,GSTR-3B,challenging,subquery,How many GSTR-3B returns have no reverse-charge inward supply row at all?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b_sup_details_isuprev iv WHERE iv.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details);,3,3,3,0,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.tbl_gst_rtn_r3b_sup_details sd
+    JOIN public.tbl_gst_rtn_r3b_sup_details_isuprev ir
+      ON ir.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details
+    WHERE sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+);",
+134,GSTR-3B,challenging,decode,Which quarter of financial year 2024-25 recorded the lowest total outward taxable value?,SELECT m.quarter FROM public.tbl_gst_rtn_r3b r JOIN common.mst_3bd_months_t m ON m.ret_period_fl = r.ret_period JOIN common.mst_fy_years_t y ON y.flag_fy = m.fy_flag JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE y.desc_year = '2024-25' GROUP BY m.quarter ORDER BY SUM(o.txval) ASC LIMIT 1;,3,0,0,0,0.0,0.0,,Empty SQL query.
+135,GSTR-3B,moderate,having,Which taxpayers filed fewer than 9 GSTR-3B returns in total?,SELECT r.gstin FROM public.tbl_gst_rtn_r3b r GROUP BY r.gstin HAVING COUNT(*) < 9;,3,3,3,0,1.0,1.0,"SELECT r.gstin
+FROM public.tbl_gst_rtn_r3b r
+GROUP BY r.gstin
+HAVING COUNT(*) < 9
+LIMIT 100;",
+136,GSTR-3B,challenging,having,"Which taxpayers have a total net ITC (IGST + CGST + SGST) above 2,000,000?",SELECT r.gstin FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_net n ON n.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg GROUP BY r.gstin HAVING SUM(n.iamt + n.camt + n.samt) > 2000000;,3,0,0,0,0.0,0.0,,Empty SQL query.
+137,GSTR-3B,challenging,domain_specific,What is the total reverse-charge ITC (IGST + CGST + SGST) claimed as available across all GSTR-3B returns?,SELECT SUM(a.iamt + a.camt + a.samt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_avl a WHERE a.ty = 'ISRC';,3,3,3,0,1.0,1.0,"SELECT SUM(av.iamt + av.camt + av.samt) AS v
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_itc_elg e ON e.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_itc_elg_itc_avl av ON av.idtbl_gst_rtn_r3b_itc_elg = e.idtbl_gst_rtn_r3b_itc_elg
+WHERE av.ty = 'ISRC';",
+138,GSTR-3B,moderate,aggregation,What is the average outward taxable value per return for the period August 2024?,SELECT AVG(o.txval) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details WHERE r.ret_period = '082024';,3,0,0,0,0.0,0.0,,Empty SQL query.
+139,GSTR-3B,moderate,grouping,What is the total inward supply value (inter-state plus intra-state) of GST-type inward supplies per taxpayer?,"SELECT r.gstin, SUM(i.inter + i.intra) AS v FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_inward_sup w ON w.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_inward_sup_isup_details i ON i.idtbl_gst_rtn_r3b_inward_sup = w.idtbl_gst_rtn_r3b_inward_sup WHERE i.ty = 'GST' GROUP BY r.gstin;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    SUM(i.inter + i.intra) AS total_inward_supply_value
+FROM public.tbl_gst_rtn_r3b r
+JOIN public.tbl_gst_rtn_r3b_inward_sup ins
+    ON ins.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b
+JOIN public.tbl_gst_rtn_r3b_inward_sup_isup_details i
+    ON i.idtbl_gst_rtn_r3b_inward_sup = ins.idtbl_gst_rtn_r3b_inward_sup
+WHERE i.ty = 'GST'
+GROUP BY r.gstin
+LIMIT 100;",
+140,GSTR-3B,simple,aggregation,What is the total non-GST inward supply value (inter-state plus intra-state) across all GSTR-3B returns?,SELECT SUM(i.inter + i.intra) AS v FROM public.tbl_gst_rtn_r3b_inward_sup_isup_details i WHERE i.ty = 'NONGST';,3,3,3,3,1.0,1.0,"SELECT SUM(i.inter + i.intra) AS v
+FROM public.tbl_gst_rtn_r3b_inward_sup_isup_details i
+WHERE i.ty = 'NONGST';",
+141,GSTR-3B,challenging,domain_specific,What is the total ITC reversed (IGST + CGST + SGST + cess) across all GSTR-3B returns?,SELECT SUM(v.iamt + v.camt + v.samt + v.csamt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_rev v;,3,3,3,0,1.0,1.0,SELECT SUM(g.iamt + g.camt + g.samt + g.csamt) AS v FROM public.tbl_gst_rtn_r3b_itc_elg_itc_rev g;,
+142,GSTR-3B,challenging,subquery,Which return periods have a total outward taxable value above the average across all return periods?,"SELECT q.ret_period FROM (SELECT r.ret_period, SUM(o.txval) AS s FROM public.tbl_gst_rtn_r3b r JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details GROUP BY r.ret_period) q WHERE q.s > (SELECT AVG(s2.s) FROM (SELECT SUM(o2.txval) AS s FROM public.tbl_gst_rtn_r3b r2 JOIN public.tbl_gst_rtn_r3b_sup_details sd2 ON sd2.idtbl_gst_rtn_r3b = r2.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o2 ON o2.idtbl_gst_rtn_r3b_sup_details = sd2.idtbl_gst_rtn_r3b_sup_details GROUP BY r2.ret_period) s2);",3,0,0,0,0.0,0.0,,Empty SQL query.
+143,GSTR-3B,moderate,quirk,On which date was the GSTR-3B return of GSTIN 24AABCE0003F9AA for the period September 2024 filed?,"SELECT TO_DATE(r.fil_dt, 'DD-MM-YYYY') AS v FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = '24AABCE0003F9AA' AND r.ret_period = '092024';",3,0,3,0,0.0,1.0,"SELECT r.fil_dt
+FROM public.tbl_gst_rtn_r3b r
+WHERE r.gstin = '24AABCE0003F9AA'
+  AND r.ret_period = '092024'
+LIMIT 100;",
+144,GSTR-3B,moderate,join,How many GSTR-3B returns were filed by taxpayers whose registration is now cancelled?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin WHERE d.canc_dt IS NOT NULL;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+WHERE d.canc_dt IS NOT NULL;",
+145,GSTR-7,challenging,domain_specific,"Which deductors paid less tax in cash than the tax they declared payable, in total across their GSTR-7 returns?","SELECT pay.gstin FROM (SELECT r.gstin, SUM(p.igst_tx + p.cgst_tx + p.sgst_tx) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tax_pay p ON p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin) pay LEFT JOIN (SELECT r.gstin, SUM(c.igst_tx + c.cgst_tx + c.sgst_tx) AS v FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tax_paid tp ON tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 JOIN public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c ON c.idtbl_gst_rtn_r7_tax_paid = tp.idtbl_gst_rtn_r7_tax_paid GROUP BY r.gstin) paid ON paid.gstin = pay.gstin WHERE COALESCE(paid.v, 0) < pay.v;",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tax_pay p
+    ON p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+LEFT JOIN public.tbl_gst_rtn_r7_tax_paid tp
+    ON tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+LEFT JOIN public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c
+    ON c.idtbl_gst_rtn_r7_tax_paid = tp.idtbl_gst_rtn_r7_tax_paid
+GROUP BY r.gstin
+HAVING COALESCE(SUM(c.igst_tx + c.cgst_tx + c.sgst_tx + c.cess_tx), 0) < SUM(p.igst_tx + p.cgst_tx + p.sgst_tx + p.cess_tx)
+LIMIT 100;",
+146,GSTR-7,challenging,aggregation,What is the total shortfall between declared tax payable and tax paid in cash (IGST + CGST + SGST) across all GSTR-7 returns?,SELECT (SELECT SUM(p.igst_tx + p.cgst_tx + p.sgst_tx) FROM public.tbl_gst_rtn_r7_tax_pay p) - (SELECT SUM(c.igst_tx + c.cgst_tx + c.sgst_tx) FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash c) AS v;,3,3,3,0,1.0,1.0,"SELECT
+    (
+        SELECT COALESCE(SUM(igst_tx + cgst_tx + sgst_tx), 0)
+        FROM public.tbl_gst_rtn_r7_tax_pay
+    ) -
+    (
+        SELECT COALESCE(SUM(igst_tx + cgst_tx + sgst_tx), 0)
+        FROM public.tbl_gst_rtn_r7_tax_paid_pd_by_cash
+    ) AS v;",
+147,GSTR-7,challenging,subquery,Which deductor and return period has no tax-paid record?,"SELECT r.gstin, r.fp FROM public.tbl_gst_rtn_r7 r WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7);",3,3,3,0,1.0,1.0,"SELECT
+    r.gstin,
+    r.fp
+FROM public.tbl_gst_rtn_r7 r
+LEFT JOIN public.tbl_gst_rtn_r7_tax_paid tp ON tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+WHERE tp.idtbl_gst_rtn_r7_tax_paid IS NULL
+LIMIT 100;",
+148,GSTR-7,moderate,filtering,How many GSTR-7 returns have a tax-paid record?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7 r WHERE EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r7_tax_paid p WHERE p.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7);,3,3,3,0,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r7 r
+WHERE EXISTS (
+    SELECT 1
+    FROM public.tbl_gst_rtn_r7_tax_paid tp
+    WHERE tp.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+);",
+149,GSTR-7,challenging,having,Which deductee GSTINs appear in the TDS records of more than one deductor?,SELECT t.gstin_ded FROM public.tbl_gst_rtn_r7_tds t JOIN public.tbl_gst_rtn_r7 r ON r.idtbl_gst_rtn_r7 = t.tbl_gst_rtn_r7 GROUP BY t.gstin_ded HAVING COUNT(DISTINCT r.gstin) > 1;,3,3,3,0,1.0,1.0,"SELECT t.gstin_ded
+FROM public.tbl_gst_rtn_r7_tds t
+JOIN public.tbl_gst_rtn_r7 r ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY t.gstin_ded
+HAVING COUNT(DISTINCT r.gstin) > 1
+LIMIT 100;",
+150,GSTR-7,challenging,having,Which deductee names are shared by more than one distinct deductee GSTIN?,SELECT t.deductee_name FROM public.tbl_gst_rtn_r7_tds t GROUP BY t.deductee_name HAVING COUNT(DISTINCT t.gstin_ded) > 1;,3,3,3,3,1.0,1.0,"SELECT t.deductee_name
+FROM public.tbl_gst_rtn_r7_tds t
+GROUP BY t.deductee_name
+HAVING COUNT(DISTINCT t.gstin_ded) > 1;",
+151,GSTR-7,moderate,aggregation,What is the total revised TDS amount (IGST + CGST + SGST) across all TDS amendments?,SELECT SUM(a.iamt + a.camt + a.samt) AS v FROM public.tbl_gst_rtn_r7_tdsa a;,3,3,3,0,1.0,1.0,SELECT SUM(iamt + camt + samt) AS v FROM public.tbl_gst_rtn_r7_tdsa;,
+152,GSTR-7,challenging,domain_specific,What is the total change in TDS base amount introduced by amendments (revised minus original)?,SELECT SUM(a.amt_ded - a.oamt_ded) AS v FROM public.tbl_gst_rtn_r7_tdsa a;,3,3,3,0,1.0,1.0,"SELECT SUM(tdsa.amt_ded - tdsa.oamt_ded) AS v
+FROM public.tbl_gst_rtn_r7_tdsa tdsa;",
+153,GSTR-7,moderate,ranking,Which deductor has the highest total revised TDS (IGST + CGST + SGST) in amendments?,SELECT r.gstin FROM public.tbl_gst_rtn_r7 r JOIN public.tbl_gst_rtn_r7_tdsa a ON a.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7 GROUP BY r.gstin ORDER BY SUM(a.iamt + a.camt + a.samt) DESC LIMIT 1;,3,3,3,0,1.0,1.0,"SELECT
+    r.gstin
+FROM public.tbl_gst_rtn_r7 r
+JOIN public.tbl_gst_rtn_r7_tdsa t ON t.tbl_gst_rtn_r7 = r.idtbl_gst_rtn_r7
+GROUP BY r.gstin
+ORDER BY SUM(t.iamt + t.camt + t.samt) DESC
+LIMIT 1",
+154,GSTR-7,simple,aggregation,How many invoice-level TDS amendment rows are recorded?,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa_inv a;,3,3,3,0,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7_tdsa_inv;,
+155,GSTR-7,challenging,join,What is the total TDS (IGST + CGST + SGST) withheld from deductees named 'MH Engineering Works'?,SELECT SUM(t.iamt + t.camt + t.samt) AS v FROM public.tbl_gst_rtn_r7_tds t WHERE t.deductee_name = 'MH Engineering Works';,3,3,3,0,1.0,1.0,"SELECT SUM(t.iamt + t.camt + t.samt) AS v
+FROM public.tbl_gst_rtn_r7_tds t
+WHERE t.deductee_name = 'MH Engineering Works'
+LIMIT 100;",
+156,GSTR-7,moderate,quirk,How many GSTR-7 returns were filed after 28 November 2025?,"SELECT COUNT(*) AS n FROM public.tbl_gst_rtn_r7 r WHERE TO_DATE(r.fil_dt, 'DD-MM-YYYY') > TO_DATE('28-11-2025', 'DD-MM-YYYY');",3,3,3,0,1.0,1.0,"SELECT COUNT(*) AS n
+FROM public.tbl_gst_rtn_r7
+WHERE TO_DATE(fil_dt, 'DD-MM-YYYY') > '2025-11-28';",
+157,GSTREG,moderate,filtering,What is the trade name of the taxpayer holding a casual registration?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.iscasdl = 'Y';,3,3,3,0,1.0,1.0,"SELECT d.trdnm
+FROM common.t_all_delers_api_v_t d
+WHERE d.iscasdl = 'Y'
+LIMIT 100;",
+158,GSTREG,challenging,domain_specific,Which taxpayers have a registration validity end date while still not cancelled?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.rgtodt IS NOT NULL AND d.canc_dt IS NULL;,3,3,3,0,1.0,1.0,"SELECT d.gstin, d.trdnm, d.rgtodt
+FROM common.t_all_delers_api_v_t d
+WHERE d.canc_dt IS NULL
+  AND d.rgtodt IS NOT NULL
+ORDER BY d.trdnm
+LIMIT 100;",
+159,GSTREG,challenging,domain_specific,Which cancelled taxpayer has a cancellation date different from its registration end date?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE d.canc_dt IS NOT NULL AND d.rgtodt IS NOT NULL AND d.canc_dt <> d.rgtodt;,3,3,3,0,1.0,1.0,"SELECT
+  d.gstin,
+  d.trdnm,
+  d.canc_dt,
+  d.rgtodt
+FROM
+  common.t_all_delers_api_v_t d
+WHERE
+  d.canc_dt IS NOT NULL
+  AND d.rgtodt IS NOT NULL
+  AND d.canc_dt <> d.rgtodt
+LIMIT 100;",
+160,GSTREG,challenging,join,Which registered taxpayers have never filed a GSTR-3B return?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin);,3,3,3,0,1.0,1.0,"SELECT d.gstin, d.trdnm, d.lgnmbzpan
+FROM common.t_all_delers_api_v_t d
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM public.tbl_gst_rtn_r3b r
+    WHERE r.gstin = d.gstin
+)
+LIMIT 100;",
+161,GSTREG,challenging,join,Which registered taxpayers appear neither as GSTR-3B filers nor as consignors or consignees on any e-way bill?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d WHERE NOT EXISTS (SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin) AND NOT EXISTS (SELECT 1 FROM public.tbl_ewb_parta_ewb e WHERE e.frgstin = d.gstin OR e.togstin = d.gstin);,3,3,3,0,1.0,1.0,"SELECT d.gstin, d.trdnm, d.lgnmbzpan
+FROM common.t_all_delers_api_v_t d
+WHERE NOT EXISTS (
+    SELECT 1 FROM public.tbl_gst_rtn_r3b r WHERE r.gstin = d.gstin
+)
+AND NOT EXISTS (
+    SELECT 1 FROM public.tbl_ewb_parta_ewb e WHERE e.frgstin = d.gstin
+)
+AND NOT EXISTS (
+    SELECT 1 FROM public.tbl_ewb_parta_ewb e WHERE e.togstin = d.gstin
+)
+LIMIT 100;",
+162,GSTREG,challenging,grouping,How many GSTR-3B returns were filed by taxpayers in each jurisdiction division?,"SELECT j.division, COUNT(*) AS n FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.division;",3,3,3,0,1.0,1.0,"SELECT j.division, COUNT(*) AS n
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+GROUP BY j.division
+LIMIT 100;",
+163,GSTREG,challenging,ranking,Which jurisdiction division has the highest total outward taxable value across all GSTR-3B returns?,SELECT j.division FROM public.tbl_gst_rtn_r3b r JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd JOIN public.tbl_gst_rtn_r3b_sup_details sd ON sd.idtbl_gst_rtn_r3b = r.idtbl_gst_rtn_r3b JOIN public.tbl_gst_rtn_r3b_sup_details_osupdet o ON o.idtbl_gst_rtn_r3b_sup_details = sd.idtbl_gst_rtn_r3b_sup_details GROUP BY j.division ORDER BY SUM(o.txval) DESC LIMIT 1;,3,0,0,0,0.0,0.0,,Empty SQL query.
+164,GSTREG,moderate,join,What are the trade names of the taxpayers who filed a GSTR-3B return for June 2025?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d JOIN public.tbl_gst_rtn_r3b r ON r.gstin = d.gstin WHERE r.ret_period = '062025' ORDER BY d.trdnm;,3,3,3,0,1.0,1.0,"SELECT DISTINCT d.trdnm
+FROM public.tbl_gst_rtn_r3b r
+JOIN common.t_all_delers_api_v_t d ON d.gstin = r.gstin
+WHERE r.ret_period = '062025'
+LIMIT 100;",
+165,GSTREG,moderate,domain_specific,How many taxpayers registered under STATE approving authority have a cancelled registration?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.appr_auth = 'STATE' AND d.canc_dt IS NOT NULL;,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM common.t_all_delers_api_v_t d
+WHERE d.appr_auth = 'STATE'
+  AND d.canc_dt IS NOT NULL;",
+166,GSTREG,moderate,decode,Which jurisdiction division does the taxpayer Mehsana Agro Traders belong to?,SELECT j.division FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.trdnm ILIKE '%Mehsana Agro Traders%';,3,3,3,0,1.0,1.0,"SELECT j.division
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+WHERE d.trdnm ILIKE '%Mehsana Agro Traders%'
+   OR d.lgnmbzpan ILIKE '%Mehsana Agro Traders%';",
+167,GSTREG,challenging,having,Which jurisdiction divisions contain more than one cancelled taxpayer?,SELECT j.division FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd WHERE d.canc_dt IS NOT NULL GROUP BY j.division HAVING COUNT(*) > 1;,3,3,3,0,1.0,1.0,"SELECT j.division
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+WHERE d.canc_dt IS NOT NULL
+GROUP BY j.division
+HAVING COUNT(*) > 1
+LIMIT 100;",
+168,GSTREG,moderate,ranking,Which jurisdiction range has the most registered taxpayers?,"SELECT j.""range"" FROM common.t_all_delers_api_v_t d JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd GROUP BY j.""range"" ORDER BY COUNT(*) DESC LIMIT 1;",3,3,3,3,1.0,1.0,"SELECT j.""range""
+FROM common.t_all_delers_api_v_t d
+JOIN common.mst_state_jurisdiction_code j ON j.state_jur_code = d.stjd
+GROUP BY j.""range""
+ORDER BY COUNT(*) DESC
+LIMIT 1;",
+169,GSTREG,challenging,join,What is the trade name of the taxpayer whose GSTIN appears as consignor on the most e-way bills?,SELECT d.trdnm FROM common.t_all_delers_api_v_t d JOIN public.tbl_ewb_parta_ewb e ON e.frgstin = d.gstin GROUP BY d.trdnm ORDER BY COUNT(*) DESC LIMIT 1;,3,3,3,0,1.0,1.0,"SELECT d.trdnm
+FROM common.t_all_delers_api_v_t d
+WHERE d.gstin = (
+    SELECT e.frgstin
+    FROM public.tbl_ewb_parta_ewb e
+    GROUP BY e.frgstin
+    ORDER BY COUNT(*) DESC
+    LIMIT 1
+);",
+170,GSTREG,simple,filtering,How many registered taxpayers are casual dealers?,SELECT COUNT(*) AS n FROM common.t_all_delers_api_v_t d WHERE d.iscasdl = 'Y';,3,3,3,3,1.0,1.0,"SELECT COUNT(*) AS n
+FROM common.t_all_delers_api_v_t d
+WHERE d.iscasdl = 'Y';",
+171,EWB,moderate,subquery,How many e-way bills have an assessable value above the average assessable value?,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb e WHERE e.assval > (SELECT AVG(assval) FROM public.tbl_ewb_parta_ewb);,3,3,3,0,1.0,1.0,SELECT COUNT(*) AS n FROM public.tbl_ewb_parta_ewb WHERE assval > (SELECT AVG(assval) FROM public.tbl_ewb_parta_ewb);,
+172,EWB,moderate,having,Which consignee names received more than 2 e-way bills?,SELECT e.toname FROM public.tbl_ewb_parta_ewb e GROUP BY e.toname HAVING COUNT(*) > 2;,3,3,3,0,1.0,1.0,"SELECT toname
+FROM public.tbl_ewb_parta_ewb
+GROUP BY toname
+HAVING COUNT(*) > 2
+LIMIT 100;",

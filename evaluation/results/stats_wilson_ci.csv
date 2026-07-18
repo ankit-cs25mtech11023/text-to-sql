@@ -1,0 +1,17 @@
+config,file,metric,k,n,rate,ci_lo,ci_hi
+XiYan baseline,baseline.csv,EX,127,172,73.8,66.8,79.8
+XiYan baseline,baseline.csv,VER,159,172,92.4,87.5,95.5
+XiYan schema-only,rag_schema.csv,EX,126,172,73.3,66.2,79.3
+XiYan schema-only,rag_schema.csv,VER,159,172,92.4,87.5,95.5
+XiYan few-shot,rag_fewshot.csv,EX,155,172,90.1,84.7,93.7
+XiYan few-shot,rag_fewshot.csv,VER,168,172,97.7,94.2,99.1
+XiYan full RAG,rag.csv,EX,156,172,90.7,85.4,94.2
+XiYan full RAG,rag.csv,VER,168,172,97.7,94.2,99.1
+Qwen baseline,qwen27b_baseline.csv,EX,151,172,87.8,82.1,91.9
+Qwen baseline,qwen27b_baseline.csv,VER,172,172,100.0,97.8,100.0
+Qwen schema-only,qwen27b_rag_schema.csv,EX,152,172,88.4,82.7,92.3
+Qwen schema-only,qwen27b_rag_schema.csv,VER,170,172,98.8,95.9,99.7
+Qwen few-shot,qwen27b_rag_fewshot.csv,EX,169,172,98.3,95.0,99.4
+Qwen few-shot,qwen27b_rag_fewshot.csv,VER,172,172,100.0,97.8,100.0
+Qwen full RAG,qwen27b_rag.csv,EX,166,172,96.5,92.6,98.4
+Qwen full RAG,qwen27b_rag.csv,VER,172,172,100.0,97.8,100.0

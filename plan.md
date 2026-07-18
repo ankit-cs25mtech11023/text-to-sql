@@ -987,8 +987,38 @@ the tunnel: **10/11 regressions fixed** (incl. all 3 held-out); residual #139 = 
 Also fixed en route: Qwen few-shot 32K overflow (`qwen_max_tokens` 1500→500; 21 empty-SQL fails were
 overflow, not model errors) and the **shared-trace-path clobber** (`rag_traces.jsonl` is overwritten
 by every RAG invocation — session-6 diagnosis had read Qwen's trace as XiYan's; runner now archives
-traces per run). **Re-run matrix in flight** (all schema-retrieval configs both models + Qwen
-contaminated/missing cells, 11 runs); baseline + few-shot configs unaffected by the fix.
+traces per run).
+
+**Step-6 COMPLETE (2026-07-18): post-fix 11-run matrix all green — FIX VERDICT: WORKED.**
+Final v2 numbers (EX/VER, runs=3 gold, run-once held-out) — full tables in `results/README.md`:
+
+| Gold 172 | XiYan-7B | Qwen-27B |   | Held-out 42 | XiYan-7B | Qwen-27B |
+|---|---|---|---|---|---|---|
+| Baseline | 73.8 / 92.4 | 87.8 / 100 |   | Baseline | 69.0 / 85.7 | 85.7 / 100 |
+| Schema-only | 73.4±0.3 / 92.4 | 88.4 / 98.8 |   | Schema-only | 76.2 / 85.7 | 92.9 / 97.6 |
+| Few-shot | 90.3 / 97.9 | **98.3 / 100** |   | Few-shot | 92.9 / 95.2 | 100 / 100 |
+| Full RAG | **90.7±0.0 / 97.9** | 96.5 / 100 |   | Full RAG | **92.9 / 97.6** | **100 / 100** |
+
+XiYan full-RAG ≥ few-shot restored (was 87.4 < 90.3 pre-fix); schema-only interference **gone**
+(≈baseline; McNemar p=1.0 both models — v1's "schema retrieval hurts" neutralized). `stats.py` on v2:
+**RAG gain significant both models** (XiYan baseline→full +34/−5 p<0.0001; Qwen +20/−5 p=0.0041);
+**few-shot vs full-RAG NOT significant either model** (XiYan p=1.0, Qwen p=0.25) — retrieved schema
+on top of few-shots buys token savings (~10K vs ~21K) + coverage insurance, not EX; RAG shrinks the
+7B↔27B gap 14.0→5.8 EX points. Full-RAG also the only Qwen config with window headroom (static 30.5K
+of 32K forced `qwen_max_tokens=500`).
+
+**Qwen full<few-shot (−3 q, p=0.25) fully root-caused** — every fail in every RAG config classified
+from traces; coverage audit across ALL fails both models found only #131 (+#79 XiYan-schema) missing
+a gold table (coverage solved). Taxonomy (details `results/README.md`): **A mirror-distraction**
+{60,45,69,76} — the "RELEVANT TABLES" caption endorses retrieved GSTR-7 payment-mirror distractors →
+module flip or `sgst_tx` column-bleed onto 3B tables, persisting through self-correction, while the
+same model routes correctly on the neutral static schema (presentation bias, not knowledge gap);
+**B coverage** {131} — tx_pmt subtree, BM25-shaped hole in semantic-only schema retrieval;
+**C demo-override** {66,124} — fails few-shot config too, not the gap (demo templates override the
+`txval>0` guard / gstin-vs-trdnm projection, the latter arguably gold-side); **D one-offs** {71,134};
+**E gold type-strictness** {143, all configs}. **Parked fixes (post-presentation, re-runs matrix):**
+neutral "CANDIDATE TABLES" caption (A); schema-side hybrid BM25+RRF, intrinsic-selected (B);
+id-vs-name gold-convention audit + optional general pool demo (C). Remaining: merge → `main`.
 
 ---
 
